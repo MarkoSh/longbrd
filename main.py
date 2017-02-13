@@ -70,6 +70,7 @@ JINJA_ENVIRONMENT = jinja2.Environment(
 class MainPage(webapp2.RequestHandler):
     def get(self):
         self.response.headers['Content-Type'] = 'text/html'
+
         template = JINJA_ENVIRONMENT.get_template('index.html')
         masthead = JINJA_ENVIRONMENT.get_template('masthead.html')
         colophon = JINJA_ENVIRONMENT.get_template('colophon.html')
@@ -84,6 +85,7 @@ class MainPage(webapp2.RequestHandler):
             postscount = Post.query().count()
         else:
             postscount = Post.query(Post.sts == 1).count()
+
 
         request = urllib2.urlopen('https://api.instagram.com/v1/users/4538785375/?access_token={}'.format(INSTAGRAM_ACCESS_TOKEN))
         jsonData = json.loads(request.read())
