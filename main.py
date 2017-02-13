@@ -86,7 +86,6 @@ class MainPage(webapp2.RequestHandler):
         else:
             postscount = Post.query(Post.sts == 1).count()
 
-
         request = urllib2.urlopen('https://api.instagram.com/v1/users/4538785375/?access_token={}'.format(INSTAGRAM_ACCESS_TOKEN))
         jsonData = json.loads(request.read())
         request.close()
