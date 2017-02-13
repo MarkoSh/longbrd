@@ -1,0 +1,131 @@
+<footer id="colophon" class="footer site-footer" role="contentinfo">
+
+    <div class="footer-social text-center">
+        <div class="social-contact">
+
+            <div class="col-xs-4">
+                <div class="social-item wow animated fadeIn" data-wow-delay=".55s">
+                    <div class="section-padding">
+                        <div class="social-icon">
+                            <a href="//www.instagram.com/longtoolong/" target="_blank"><i class="fa fa-instagram"></i></a>
+                        </div><!-- /.social-icon -->
+                        <div class="countdown">
+                            <span class="count-number counter">{{ instafollowers }}</span>
+                        </div><!-- /.coundown -->
+                        <span class="about-item">подписчиков</span>
+                    </div><!-- /.section-padding -->
+                </div><!-- /.social-item -->
+            </div>
+
+            <div class="col-xs-4">
+                <div class="social-item wow animated fadeIn" data-wow-delay=".55s">
+                    <div class="section-padding">
+                        <div class="social-icon">
+                            <a href="//www.instagram.com/longtoolong/" target="_blank"><i class="fa fa-picture-o" aria-hidden="true"></i></a>
+                        </div><!-- /.social-icon -->
+                        <div class="countdown">
+                            <span class="count-number counter">{{ instaphotos }}</span>
+                        </div><!-- /.coundown -->
+                        <span class="about-item">фотографий</span>
+                    </div><!-- /.section-padding -->
+                </div><!-- /.social-item -->
+            </div>
+
+            <div class="col-xs-4">
+                <div class="social-item wow animated fadeIn" data-wow-delay=".55s">
+                    <div class="section-padding">
+                        <div class="social-icon">
+                            <a href="/blog.html"><i class="fa fa-list-alt" aria-hidden="true"></i></a>
+                        </div><!-- /.social-icon -->
+                        <div class="countdown">
+                            <span class="count-number counter">{{ postscount }}</span>
+                        </div><!-- /.coundown -->
+                        <span class="about-item">постов</span>
+                    </div><!-- /.section-padding -->
+                </div><!-- /.social-item -->
+            </div>
+
+        </div><!-- /.social-contact -->
+    </div><!-- /.footer-social -->
+
+
+    <div class="footer-top">
+        <div class="section-padding">
+            <div class="container">
+                <div class="row">
+
+                    <div class="col-sm-4">
+                        <div class="widget widget_menu">
+                            <h3 class="widget-title">Навигация</h3><!-- /.widget-title -->
+                            <div class="widget-details">
+                                <nav>
+                                    <ul>
+                                        <li><a href="/#about">О компании</a></li>
+                                        <li><a href="/#services">Обслуживание</a></li>
+                                        <li><a href="/#blog">Акции</a></li>
+                                        <li><a href="/#contact">Контакты</a></li>
+                                    </ul>
+                                </nav>
+                            </div><!-- /.widget-details -->
+                        </div><!-- /.widget -->
+                    </div>
+
+                    <div class="col-sm-4">
+                        <div class="widget widget_latest-blog-post">
+                            <h3 class="widget-title">Акции и скидки</h3><!-- /.widget-title -->
+                            <div class="widget-details">
+                                <div class="title-list">
+                                    <ul>
+                                        <li><a href="#" class="entry-title">TopClass WordPress Theme</a></li>
+                                        <li><a href="#" class="entry-title">Foody HTML5 Template</a></li>
+                                        <li><a href="#" class="entry-title">Memorials HTML5 Template</a></li>
+                                        <li><a href="#" class="entry-title">Mama HTML5 Template</a></li>
+                                        <li><a href="#" class="entry-title">Open HTML5 Template</a></li>
+                                    </ul>
+                                </div><!-- /.title-list -->
+                            </div><!-- /.widget-details -->
+                        </div><!-- /.widget -->
+                    </div>
+
+                    <div class="col-sm-4">
+                        <div class="widget widget_photo_stream">
+                            <h3 class="widget-title">Photo Stream</h3><!-- /.widget-title -->
+                            <div class="widget-details">
+                                <div class="photo-list">
+                                    <ul>
+                                        {% for item in photo_stream %}
+                                        <li><a href="{{ item.url }}" target="_blank"><img src="{{ item.src }}" alt=""></a></li>
+                                        {% endfor %}
+                                    </ul>
+                                </div><!-- /.photo-list -->
+                            </div><!-- /.widget-details -->
+                        </div><!-- /.widget -->
+                    </div>
+
+                </div><!-- /.row -->
+            </div><!-- /.container -->
+        </div><!-- /.section-padding -->
+    </div><!-- /.footer-top -->
+
+    <div class="footer-bottom">
+        <div class="container">
+            <div class="footer-menu pull-left">
+                <div class="widget widget_menu">
+                    <nav class="widget-menu">
+                        <ul>
+                            <li><a href="/#main-slider">Галерея</a></li>
+                            <li><a href="/#services">Обслуживание</a></li>
+                            <li><a href="/#blog">Блог</a></li>
+                            <li><a href="/#contact">Контакты</a></li>
+                        </ul>
+                    </nav>
+                </div><!-- /.widget -->
+            </div><!-- /.footer-menu -->
+
+            <div class="copy-right pull-right">
+                2017 Лонгборд
+            </div>
+
+        </div><!-- /.container -->
+    </div><!-- /.footer-bottom -->
+</footer><!-- /#colophon -->

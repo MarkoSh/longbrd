@@ -1,0 +1,41 @@
+<div class="col-md-3 col-sm-6">
+    {% if admin %}<form id="editor-{{ productId }}" class="">{% endif %}
+    <div class="item wow animated fadeInLeft" data-wow-delay=".5s" itemscope
+         itemtype="http://schema.org/Product">
+        <div class="cycle-slideshow item-icon">
+            {% for item in images %}
+            <img itemprop="image"
+                 src="{{ item }}"
+                 alt="{{ title }}">
+            {% endfor %}
+        </div><!-- /.item-icon -->
+        <div class="item-details">
+            <h4 class="item-title" itemprop="name">
+                {{ title }}
+            </h4><!-- /.item-title -->
+            <ul class="item-description text-left" itemprop="description">
+                <li><span>Производитель:</span> <span>{{ manufacturer }}</span></li>
+                <li><span>Тип:</span> <span>{{ type }}</span></li>
+                <li><span>Материал деки:</span> <span>{{ material }}</span></li>
+                <li><span>Число слоев деки:</span> <span>{{ layers }}</span></li>
+                <li><span>Длина деки:</span> <span>{{ length }}"</span></li>
+                <li><span>Ширина деки:</span> <span>{{ width }}"</span></li>
+                <li><span>Диаметр колес:</span> <span>{{ diameter }} мм</span></li>
+                <li><span>Толщина колес:</span> <span>{{ wheels_width }} мм</span></li>
+                <li><span>Класс подшипников:</span> <span>{{ bearing }}</span></li>
+                <li><span>Жесткость колес:</span> <span>{{ hardness }}</span></li>
+                <li><span>Ширина подвески:</span> <span>{{ suspension }}"</span></li>
+                <li itemprop="offers" itemscope itemtype="http://schema.org/Offer">
+                    <span>Цена <small>(с доставкой)</small>:</span>
+                    <span class="price" itemprop="price" content="{{ price }}">
+                        {{ price }}
+                        <i class="fa fa-rub" aria-hidden="true" itemprop="priceCurrency" content="RUB"></i>
+                    </span>
+                </li>
+            </ul><!-- /.item-description -->
+        </div><!-- /.item-details -->
+        <a href="#" class="btn read-more">Заказать</a>
+    </div><!-- /.item -->
+    {% if admin %}</form>{% endif %}
+</div>
+

@@ -1,0 +1,73 @@
+{% if admin %}<form id="editor-{{ postId }}" class="">{% endif %}
+<article id="post-{{ postId }}" class="post type-post" itemscope itemtype="http://schema.org/VideoObject">
+    <div class="post-head media">
+        <div class="entry-date media-left text-center">
+            <time datetime="{{ date }}">{{ month }} <span>{{ day }}</span></time>
+        </div><!-- /.entry-date -->
+        <div class="media-body">
+            <a href="#post-{{ postId }}"><h2 class="entry-title" itemprop="name">{{ title }}</h2></a>
+            <meta itemprop="contentUrl" content="https://www.youtube.com/watch?v={{ ytCode }}">
+            <meta itemprop="duration" content="{{ duration }}">
+            <meta itemprop="thumbnailUrl" content="{{ thumbnailUrl }}">
+            <meta itemprop="uploadDate" content="{{ uploadDate }}">
+            <!-- /.entry-title -->
+            <div class="share-post pull-right">
+                <ul class="share-list">
+                    <li><a href="#"><i class="fa fa-facebook"></i></a></li>
+                    <li><a href="#"><i class="fa fa-twitter"></i></a></li>
+                    <li><a href="#"><i class="fa fa-google-plus"></i></a></li>
+                    <li><a href="#"><i class="fa fa-pinterest"></i></a></li>
+                </ul>
+            </div><!-- /.share-post -->
+            <div class="post-meta clearfix">
+                <div class="entry-meta">
+                    <div class="author pull-left">
+                        <span class="author-name">{{ authorName }}</span>
+                    </div><!-- /.author -->
+                </div><!-- /.entry-meta -->
+            </div><!-- /.post-meta -->
+            {% if admin %}
+            <label><input type="text" class="editor" name="title" value="{{ title }}" /><span>Заголовок</span></label>
+            <label><input type="text" class="editor" name="authorName" value="{{ authorName }}" /><span>Автор</span></label>
+            <label><input type="text" class="editor" name="ytCode" value="{{ ytCode }}" /><span>Код видео</span></label>
+            <label><input type="text" class="editor" name="duration" value="{{ duration }}" /><span>Длительность</span></label>
+            <label><input type="text" class="editor" name="thumbnailUrl" value="{{ thumbnailUrl }}" /><span>Адрес тумбы</span></label>
+            <label><input type="text" class="editor" name="uploadDate" value="{{ uploadDate }}" /><span>Дата заливки</span></label>
+            {% endif %}
+        </div>
+    </div><!-- /.post-head -->
+
+    <div class="post-content" itemprop="description">
+        <div class="embed-responsive embed-responsive-16by9">
+            <iframe width="560" height="315" src="https://www.youtube.com/embed/{{ ytCode }}" frameborder="0" allowfullscreen></iframe>
+        </div><!-- /.post-thumbnail -->
+        <div class="entry-content">
+        {% for item in entryContent %}
+            {{ item }}
+        {% endfor %}
+        </div><!-- /.entry-content -->
+        {% if admin %}
+        <label><textarea class="editor" name="entryContent">{{ content }}</textarea><span>Описание</span></label>
+        {% endif%}
+        <div class="post-tag">
+            <ul class="tag-list">
+                {% for item in tagList %}
+                <li><a href="#">{{ item }}</a></li>
+                {% endfor %}
+            </ul><!-- /.tag-list -->
+        </div><!-- /.post-tag -->
+        {% if admin %}
+        <label><input type="text" class="editor" name="tagList" value="{{ tags }}" /><span>Теги</span></label>
+        <input type="hidden" name="postId" value="{{ postId }}" />
+        <div class="edit-links-wrapper">
+            <ul class="edit-links-list">
+                <li><i class="stsicon fa fa-check{% if sts %} fa-check-circle{% endif %}" aria-hidden="true"></i></li>
+                <li><input type="submit" class="btn-link" value="Применить"></li>
+                <li><input type="button" data-postid="{{ postId }}" class="btn-link publish" value="Опубликовать"></li>
+                <li><input type="button" data-postid="{{ postId }}"class="btn-link remove" value="Удалить"></li>
+            </ul><!-- /.tag-list -->
+        </div><!-- /.post-tag -->
+        {% endif %}
+    </div><!-- /.post-content -->
+</article><!-- /.type-post -->
+{% if admin %}</form>{% endif %}
