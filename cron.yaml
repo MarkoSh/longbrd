@@ -1,0 +1,12 @@
+cron:
+- description: Обновление фотострима
+  url: /getstream
+  schedule: every 72 hours
+
+- description: Обновление ленты в сайдбаре
+  url: /getmine
+  schedule: every 72 hours
+
+- description: Обновление видео
+  url: /getvideos
+  schedule: every 72 hours

@@ -1,0 +1,67 @@
+//@extend-elements
+//original selectors
+//html, body
+%extend_1 {
+  background: $white;
+  font-family: $font_0, $font_1, $font_2;
+  font-size: 16px;
+  text-rendering: optimizeLegibility !important;
+  overflow-scrolling: touch;
+}
+
+//original selectors
+//iframe, audio
+%extend_2 {
+  width: 100%;
+  height: auto;
+  border: none;
+}
+
+//original selectors
+//.form-control:focus, input:focus, textarea:focus, button:focus
+%extend_3 {
+  border: 1px solid $color_celeste_approx;
+  //Instead of the line below you could use @include box-shadow($shadow-1, $shadow-2, $shadow-3, $shadow-4, $shadow-5, $shadow-6, $shadow-7, $shadow-8, $shadow-9, $shadow-10)
+  box-shadow: none;
+  outline: 0 !important;
+}
+
+//original selectors
+//.navbar-default .navbar-nav >.active >a, .navbar-default .navbar-nav >.open >a, .navbar-default .navbar-nav >.active >a:hover, .navbar-default .navbar-nav >.open >a:hover
+%extend_4 {
+  background: transparent;
+  //Instead of the line below you could use @include box-shadow($shadow-1, $shadow-2, $shadow-3, $shadow-4, $shadow-5, $shadow-6, $shadow-7, $shadow-8, $shadow-9, $shadow-10)
+  box-shadow: none;
+  color: $white;
+}
+
+//original selectors
+//.contactform input, .contactform textarea
+%extend_5 {
+  background-color: $white;
+  border-bottom: 1px solid $color_mercury_approx !important;
+  //Instead of the line below you could use @include box-shadow($shadow-1, $shadow-2, $shadow-3, $shadow-4, $shadow-5, $shadow-6, $shadow-7, $shadow-8, $shadow-9, $shadow-10)
+  box-shadow: none;
+  margin-bottom: 15px;
+  min-width: 380px;
+  padding: 12px 15px;
+}
+
+//original selectors
+//.pagination >li >a, .pagination >li >span
+%extend_6 {
+  border-color: $color_shady_lady_approx;
+  //Instead of the line below you could use @include border-radius($radius, $vertical-radius)
+  border-radius: 0 !important;
+  color: $color_shady_lady_approx;
+  margin: 0 6px;
+  padding: 7px 11px;
+}
+
+//original selectors
+//.pagination >li.active a, .pagination >li.active a:hover
+%extend_7 {
+  background: $white;
+  border-color: $color_cinnabar_approx;
+  color: $color_cinnabar_approx;
+}

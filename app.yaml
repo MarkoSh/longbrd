@@ -1,0 +1,60 @@
+application: longbrrd
+version: 1
+runtime: python27
+api_version: 1
+threadsafe: true
+
+default_expiration: "30d"
+
+handlers:
+- url: /assets/fonts/(.*\.otf)
+  mime_type: application/x-font-otf
+  static_files: assets/fonts/\1
+  upload: assets/fonts/(.*\.otf)
+
+- url: /assets
+  static_dir: assets
+
+- url: /static
+  static_dir: static
+
+- url: /images
+  static_dir: images
+
+- url: /(.*\.(gif|png|jpg|ico))$
+  static_files: /\1
+  upload: /.*\.(gif|png|jpg|ico)$
+
+- url: /email\.php
+  script: email.php
+
+- url: /_ah/queue/deferred
+  script: google.appengine.ext.deferred.deferred.application
+  login: admin
+
+- url: /robots\.txt
+  mime_type: text/plain
+  static_files: static/robots.txt
+  upload: static/robots.txt
+
+- url: /sitemap\.xml
+  mime_type: text/xml
+  static_files: static/sitemap.xml
+  upload: static/sitemap.xml
+
+- url: .*
+  script: main.app
+
+skip_files:
+- ^(.*/)?.*\.scss$
+
+libraries:
+- name: webapp2
+  version: "2.5.2"
+- name: jinja2
+  version: latest
+- name: lxml
+  version: latest
+
+builtins:
+- deferred: on
