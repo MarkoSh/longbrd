@@ -1450,3 +1450,12 @@ textarea.editor {
     }
   }
 }
+
+.gsc-control-cse {
+  * {
+    box-sizing: content-box;
+  }
+  .gsc-input {
+    line-height: normal;
+  }
+}

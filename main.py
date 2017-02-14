@@ -41,6 +41,7 @@ class Post(ndb.Model):
     uploadDate = ndb.StringProperty()
     authorName = ndb.StringProperty()
     ytCode = ndb.StringProperty()
+    taskId = ndb.IntegerProperty()
     entryContent = ndb.StringProperty(repeated=True)
     tagList = ndb.StringProperty(repeated=True)
     sts = ndb.IntegerProperty(default=0)
@@ -62,6 +63,11 @@ class Product(ndb.Model):
     suspension = ndb.FloatProperty()
     price = ndb.FloatProperty()
 
+class Token(ndb.Model):
+    title = ndb.StringProperty()
+    key = ndb.StringProperty()
+    date = ndb.DateTimeProperty(auto_now_add=True)
+
 JINJA_ENVIRONMENT = jinja2.Environment(
     loader=jinja2.FileSystemLoader('.'),
     extensions=['jinja2.ext.autoescape'],
@@ -70,6 +76,17 @@ JINJA_ENVIRONMENT = jinja2.Environment(
 class MainPage(webapp2.RequestHandler):
     def get(self):
         self.response.headers['Content-Type'] = 'text/html'
+
+        if self.request.get('code'):
+            code = self.request.get('code')
+            fp = urllib2.urlopen('https://longbord.bitrix24.ru/oauth/token/?client_id={}&grant_type=authorization_code&client_secret={}&redirect_uri=http://longbrd.ru&code={}&scope=crm,user,task,tasks_extended,sonet_group'.format(BTRX24_CODE, BTRX24_KEY, code))
+            data = json.loads(fp.read())
+            ndb.delete_multi(Token.query().fetch(keys_only=True))
+            token = Token(title="Bitrix24", key=data['access_token'])
+            token.put()
+            self.redirect("/")
+            return
+
 
         template = JINJA_ENVIRONMENT.get_template('index.html')
         masthead = JINJA_ENVIRONMENT.get_template('masthead.html')
@@ -175,7 +192,7 @@ class MainPage(webapp2.RequestHandler):
         return [{
              'src': photo.src,
              'url': photo.link,
-         } for photo in images[:16]]
+         } for photo in images[:18]]
 
     @staticmethod
     def sendSMS(key):
@@ -220,7 +237,7 @@ class Cron(webapp2.RequestHandler):
             keys = ndb.put_multi(images)
 
         if path == '/getvideos':
-            request = urllib2.urlopen('https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&type=video&q=longboard&key={}'.format(YT_TOKEN))
+            request = urllib2.urlopen('https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=10&type=video&q=longboard&key={}'.format(YT_TOKEN))
             jsonData = json.loads(request.read())
             request.close()
 
@@ -262,7 +279,7 @@ class Blog(webapp2.RequestHandler):
         postscount = 0
 
         if admin:
-            posts, next, more = Post.query(Post.sts < 2).order(Post.sts, -Post.date).fetch_page(POSTS_PER_PAGE, offset=offset)
+            posts, next, more = Post.query(ndb.OR(Post.sts == 0, Post.sts == 1)).order(Post._key, Post.sts, -Post.date).fetch_page(POSTS_PER_PAGE, offset=offset)
             pages = Post.query().count()
             postscount = pages
         else:
@@ -270,7 +287,7 @@ class Blog(webapp2.RequestHandler):
             pages = Post.query(Post.sts == 1).count()
             postscount = pages
 
-        pages = int(math.ceil(float(pages) / POSTS_PER_PAGE))
+        pages = int(math.floor(float(pages) / POSTS_PER_PAGE))
         posts = [{
                      'admin': admin,
                      'sts': post.sts,
