@@ -41,6 +41,7 @@ class Post(ndb.Model):
     uploadDate = ndb.StringProperty()
     authorName = ndb.StringProperty()
     ytCode = ndb.StringProperty()
+    taskId = ndb.IntegerProperty()
     entryContent = ndb.StringProperty(repeated=True)
     tagList = ndb.StringProperty(repeated=True)
     sts = ndb.IntegerProperty(default=0)
@@ -262,7 +263,7 @@ class Blog(webapp2.RequestHandler):
         postscount = 0
 
         if admin:
-            posts, next, more = Post.query(Post.sts < 2).order(Post.sts, -Post.date).fetch_page(POSTS_PER_PAGE, offset=offset)
+            posts, next, more = Post.query(ndb.OR(Post.sts == 0, Post.sts == 1)).order(Post._key, Post.sts, -Post.date).fetch_page(POSTS_PER_PAGE, offset=offset)
             pages = Post.query().count()
             postscount = pages
         else:
