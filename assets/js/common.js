@@ -250,4 +250,11 @@
 
         $("#masthead #main-menu").onePageNav(), i()
     });
+
+    $('#waypoint').waypoint({
+        handler: function () {
+            console.warn('Scrolled');
+        },
+        offset: "200%"
+    })
 })(jQuery);

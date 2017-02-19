@@ -19,4 +19,9 @@ indexes:
   properties:
   - name: sts
   - name: date
+
+- kind: Post
+  properties:
+  - name: sts
+  - name: date
     direction: desc

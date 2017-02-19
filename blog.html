@@ -118,7 +118,7 @@
             <gcse:search></gcse:search>
         </div>
         <div class="row">
-            <div class="col-md-9">
+            <div class="col-md-9" data-next="{{ next }}">
                 <nav class="text-center">
                     <ul class="pagination">
                         <li{% if not currentPage %} class="active"{% endif %}><a href="/blog.html">1</a></li>
@@ -133,7 +133,7 @@
                 {{ posts }}
 
                 <nav class="text-center">
-                    <ul class="pagination">
+                    <ul class="pagination" id="waypoint">
                         <li{% if not currentPage %} class="active"{% endif %}><a href="/blog.html">1</a></li>
                         {% for i in range(1, pages) %}
                         {% if i %}
