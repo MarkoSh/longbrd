@@ -48,7 +48,7 @@
         ));
         return matches ? decodeURIComponent(matches[1]) : undefined;
     };
-    
+
     $("form.orderform")
         .append('<input type="hidden" name="label" value="' + getCookie('_ga') + '">')
         .submit(function (e) {
@@ -252,9 +252,24 @@
     });
 
     $('#waypoint').waypoint({
-        handler: function () {
-            console.warn('Scrolled');
+        handler: function (direction) {
+            if (direction == 'down') {
+                var active = $('.pagination li.active');
+                var next = active.next();
+                if (next.length) {
+                    active.removeClass('active');
+                    next.addClass('active');
+                    var href = next.find('a').attr('href');
+                    $.get(href, function (res) {
+                        $('.posts-wrapper').append($('.posts-wrapper', res).html());
+                        history.pushState(null, null, href);
+                        Waypoint.refreshAll();
+                        $("body").trigger('scrolled');
+                    });
+                }
+            }
+
         },
-        offset: "200%"
-    })
+        offset: "100%"
+    });
 })(jQuery);

@@ -264,7 +264,7 @@ class Cron(webapp2.RequestHandler):
             keys = ndb.put_multi(images)
 
         if path == '/getvideos':
-            fp = urllib2.urlopen('https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=15&type=video&q=longboard&relevanceLanguage=ru&regionCode=RU&key={}'.format(YT_TOKEN))
+            fp = urllib2.urlopen('https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=15&type=video&q=Лонгбординг&relevanceLanguage=ru&regionCode=RU&key={}'.format(YT_TOKEN))
             jsonData = json.loads(fp.read())
 
             videos = []

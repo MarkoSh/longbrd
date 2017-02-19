@@ -1,13 +1,19 @@
 (function ($) {
-    tinymce.init({
+
+    var options = {
         selector: "textarea.editor",
         theme: "modern",
         forced_root_block : false,
         force_p_newlines: true,
         force_br_newlines: true,
         menubar: false
+    };
+    tinymce.init(options);
+    $("body").on('scrolled', function () {
+        tinymce.EditorManager.editors = [];
+        tinymce.init(options);
     });
-    $('form[id*=editor-]').submit(function (e) {
+    $("body").on('submit', 'form[id*=editor-]', function (e) {
         tinymce.triggerSave();
         var $this = $(this);
         $this.addClass('process');
@@ -19,7 +25,7 @@
         });
         return false;
     });
-    $('[type=button]').click(function (e) {
+    $("body").on('click', '[type=button]', function (e) {
         var $this = $(this);
         var btnTxt = $this.val();
         var postid = $this.data('postid');
