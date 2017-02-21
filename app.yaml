@@ -7,6 +7,26 @@ threadsafe: true
 default_expiration: "30d"
 
 handlers:
+- url: /(.*\.txt)
+  mime_type: text/plain
+  static_files: static/\1.ico
+  upload: static/(.*\.ico)
+
+- url: /(.*\.xml)
+  mime_type: text/xml
+  static_files: static/\1.xml
+  upload: static/(.*\.xml)
+
+- url: /(.*\.png)
+  mime_type: image/png
+  static_files: static/\1.png
+  upload: static/(.*\.png)
+
+- url: /(.*\.ico)
+  mime_type: image/vnd.microsoft.icon
+  static_files: static/\1.ico
+  upload: static/(.*\.ico)
+
 - url: /assets/fonts/(.*\.otf)
   mime_type: application/x-font-otf
   static_files: assets/fonts/\1
@@ -21,26 +41,9 @@ handlers:
 - url: /images
   static_dir: images
 
-- url: /email\.php
-  script: email.php
-
 - url: /_ah/queue/deferred
   script: google.appengine.ext.deferred.deferred.application
   login: admin
-
-- url: /robots\.txt
-  mime_type: text/plain
-  static_files: static/robots.txt
-  upload: static/robots.txt
-
-- url: /(.+)\.xml
-  mime_type: text/xml
-  static_files: static/\1.xml
-  upload: static/\1.xml
-
-- url: /((.*\.(png|ico))
-  static_files: static/\1
-  upload: static/\1
 
 - url: .*
   script: main.app
@@ -52,7 +55,7 @@ skip_files:
 
 libraries:
 - name: webapp2
-  version: "2.5.2"
+  version: latest
 - name: jinja2
   version: latest
 - name: lxml
