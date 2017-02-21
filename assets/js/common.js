@@ -53,54 +53,67 @@
         .append('<input type="hidden" name="label" value="' + getCookie('_ga') + '">')
         .submit(function (e) {
 
-        var $this = $(this);
-        
-        if ($this.attr('id') == 'search') {
-            
+
+            var $this = $(this);
+
+            if ($this.attr('id') == 'search') {
+                return false;
+            }
+
+            var phone = $this.find('[name = phone]').val(),
+                email = $this.find('[name = email]').val(),
+                contact = $this.find('[name = discount]').val();
+
+            ga('set', 'dimension1', phone);
+            ga('set', 'dimension2', email);
+            ga('set', 'dimension6', contact);
+
+            ga("send", "event", "Отправка форм", "Форма " + $this.attr('id'), host, 10);
+
+            var data = $this.serialize();
+
+            $this.find("[type = submit]").prop('disabled', true);
+
+            $.post('/order', data, function (res) {
+                if (res.status == 'ok') {
+                    $this.find("[type = submit]").prop('disabled', false);
+                    $this.get(0).reset();
+                    $.magnificPopup.open({
+                        showCloseBtn: false,
+                        items: {
+                            src: "#success-popup",
+                            type: 'inline'
+                        }
+                    });
+                } else {
+                    $this.find("[type = submit]").prop('disabled', false);
+                    $this.get(0).reset();
+                    $.magnificPopup.open({
+                        showCloseBtn: false,
+                        items: {
+                            src: "#fail-popup",
+                            type: 'inline'
+                        }
+                    });
+                }
+
+                setTimeout(function () {
+                    $.magnificPopup.close();
+                }, 3000);
+            }, 'json').fail(function (res) {
+                $this.find("[type = submit]").prop('disabled', false);
+                $.magnificPopup.open({
+                    showCloseBtn: false,
+                    items: {
+                        src: "#fail-popup",
+                        type: 'inline'
+                    }
+                });
+                setTimeout(function () {
+                    $.magnificPopup.close();
+                }, 3000);
+            });
             return false;
-        }
-
-        var phone = $this.find('[name = phone]').val(),
-            email = $this.find('[name = email]').val(),
-            contact = $this.find('[name = discount]').val();
-
-        ga('set', 'dimension1', phone);
-        ga('set', 'dimension2', email);
-        ga('set', 'dimension6', contact);
-
-        ga("send", "event", "Отправка форм", "Форма " + $this.attr('id'), host, 10);
-
-        var data = $this.serialize();
-
-        $this.find("[type = submit]").prop('disabled', true);
-
-        $.post('/order', data, function (res) {
-            $this.find("[type = submit]").prop('disabled', false);
-            $this.get(0).reset();
-            $.magnificPopup.open({
-                showCloseBtn: false,
-                items: {
-                    src: "#success-popup",
-                    type: 'inline'
-                }
-            });
-            setTimeout(function () {
-                $.magnificPopup.close();
-            }, 3000);
-        }, 'json').fail(function (res) {
-            $this.find("[type = submit]").prop('disabled', false);
-            $.magnificPopup.open({
-                showCloseBtn: false,
-                items: {
-                    src: "#fail-popup",
-                    type: 'inline'
-                }
-            });
-            setTimeout(function () {
-                $.magnificPopup.close();
-            }, 3000);
-        });
-        return false;
     });
 
     $(".bxslider").bxSlider({

@@ -21,10 +21,6 @@ handlers:
 - url: /images
   static_dir: images
 
-- url: /(.*\.(gif|png|jpg|ico))$
-  static_files: /\1
-  upload: /.*\.(gif|png|jpg|ico)$
-
 - url: /email\.php
   script: email.php
 
@@ -37,16 +33,22 @@ handlers:
   static_files: static/robots.txt
   upload: static/robots.txt
 
-- url: /sitemap\.xml
+- url: /(.+)\.xml
   mime_type: text/xml
-  static_files: static/sitemap.xml
-  upload: static/sitemap.xml
+  static_files: static/\1.xml
+  upload: static/\1.xml
+
+- url: /((.*\.(png|ico))
+  static_files: static/\1
+  upload: static/\1
 
 - url: .*
   script: main.app
 
 skip_files:
 - ^(.*/)?.*\.scss$
+- ^(.*/)?.*\.pyc
+- ^(.*/)?.*\.db
 
 libraries:
 - name: webapp2

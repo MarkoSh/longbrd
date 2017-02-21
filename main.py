@@ -105,7 +105,6 @@ class MainPage(webapp2.RequestHandler):
             except urllib2.HTTPError as err:
                 self.redirect("/?error")
 
-
         template = JINJA_ENVIRONMENT.get_template('index.html')
         masthead = JINJA_ENVIRONMENT.get_template('masthead.html')
         colophon = JINJA_ENVIRONMENT.get_template('colophon.html')
@@ -172,30 +171,33 @@ class MainPage(webapp2.RequestHandler):
             message = self.request.get('message')
             contact = self.request.get('discount')
 
-            leader = Leader()
-            leadId = leader.add(
-                name=name if name else False,
-                phone=phone if phone else False,
-                email=email,
-                message=message,
-                contact=contact
-            )
-            lead = Lead(
-                ga=self.request.cookies.get('_ga'),
-                name=name,
-                phone=phone,
-                email=email,
-                message=message,
-                contact=contact,
-                leadId=leadId,
-                ip=self.request.remote_addr
-            )
+            if phone or email:
+                leader = Leader()
+                leadId = leader.add(
+                    name=name if name else False,
+                    phone=phone if phone else False,
+                    email=email,
+                    message=message,
+                    contact=contact
+                )
+                lead = Lead(
+                    ga=self.request.cookies.get('_ga'),
+                    name=name,
+                    phone=phone,
+                    email=email,
+                    message=message,
+                    contact=contact,
+                    leadId=leadId,
+                    ip=self.request.remote_addr
+                )
 
-            key = lead.put()
+                key = lead.put()
 
-            # deferred.defer(sendSMS, key, leadId)
+                # deferred.defer(sendSMS, key, leadId)
 
-            self.respond_json("ok")
+                self.respond_json("ok")
+            else:
+                self.respond_json("no")
         else:
             self.respond_json("no")
 
@@ -525,9 +527,10 @@ class Tasker():
 
 class Leader():
     def add(self, name=False, phone=False, email=False, message=False, contact=False):
+        name = name.encode('UTF-8') if name else "Запрос скидки"
         q = {
-            'fields[TITLE]': name.encode('UTF-8') if name else "Запрос скидки",
-            'fields[NAME]': contact if contact else name.encode('UTF-8'),
+            'fields[TITLE]': name,
+            'fields[NAME]': contact if contact else name,
             'fields[PHONE][0][VALUE]': phone,
             'fields[PHONE][0][VALUE_TYPE]': "OTHER",
             'fields[EMAIL][0][VALUE]': email if email else contact,
