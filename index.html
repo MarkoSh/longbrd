@@ -327,8 +327,7 @@
 
                         <div class="subscribe-hide">
                             <input class="subscribe-email" type="text" id="subscribe-email"
-                                   placeholder="E-Mail или телефон" name="discount"
-                                   required>
+                                   placeholder="E-Mail или телефон" name="discount">
                             <button type="submit" id="subscribe-submit" class="btn">Скидка!</button>
                             <span id="subscribe-loading" class="btn"> <i class="fa fa-refresh fa-spin"></i> </span>
                             <div class="subscribe-error"></div>
@@ -545,8 +544,18 @@
 <div id="success-popup" class="popup mfp-hide">
     Заявка отправлена, в ближайшее время с вами свяжется наш менеджер
 </div>
+<div id="nofields-popup" class="popup mfp-hide">
+    Не указана контактная информация
+</div>
 <div id="fail-popup" class="popup mfp-hide">
     Ошибка при отправке заявки, попробуйте позже, или перезагрузите страницу
+</div>
+<div id="blocker-popup" class="popup mfp-hide">
+    Вы используете блокировщик рекламы,<br />
+    который блокирует отправку заявок.<br />
+    Для правильного функционирования сайта,<br />
+    добавьте наш адрес в белый список,<br />
+    или временно отключите блокировщик.
 </div>
 
 {{ scripts }}

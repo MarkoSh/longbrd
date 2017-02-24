@@ -178,14 +178,16 @@ class MainPage(webapp2.RequestHandler):
 
     def post(self):
         label = self.request.get('label')
-        if label == self.request.cookies.get('_ga'):
+        sl = int(self.request.get('sl'))
+        response = {'status': "ok"}
+        if label == self.request.cookies.get('_ga') and sl > 1000:
             name = self.request.get('name')
             phone = self.request.get('phone')
             email = self.request.get('email')
             message = self.request.get('message')
             contact = self.request.get('discount')
 
-            if phone or email:
+            if phone or email or contact:
                 leader = Leader()
                 leadId = leader.add(
                     name=name if name else False,
@@ -195,7 +197,7 @@ class MainPage(webapp2.RequestHandler):
                     contact=contact
                 )
                 lead = Lead(
-                    ga=self.request.cookies.get('_ga'),
+                    ga=label,
                     name=name,
                     phone=phone,
                     email=email,
@@ -209,16 +211,17 @@ class MainPage(webapp2.RequestHandler):
 
                 # deferred.defer(sendSMS, key, leadId)
 
-                self.respond_json("ok")
+                response['leadId'] = leadId
             else:
-                self.respond_json("no")
+                response['status'] = "nofields"
         else:
-            self.respond_json("no")
+            response['status'] = "no"
 
-    def respond_json(self, sts="ok"):
+        self.respond_json(response)
+
+    def respond_json(self, response={'status': "ok"}):
         self.response.headers['Content-Type'] = 'application/json'
-        result = {'status': sts}
-        self.response.write(json.dumps(result))
+        self.response.write(json.dumps(response))
 
     @staticmethod
     def getPhotoStream(type, num = 18):
@@ -284,7 +287,20 @@ class Cron(webapp2.RequestHandler):
             jsonData = json.loads(fp.read())
 
             videos = []
-
+            tagList = [
+                'лонгборд',
+                'скейтборд',
+                'лонгбординг',
+                'скейтбординг',
+                'скорость',
+                'ветер',
+                'даунхилл',
+                'longboard',
+                'skateboard',
+                'longboarding',
+                'skateboarding',
+            ]
+            random.shuffle(tagList)
             for item in jsonData['items']:
                 if item['id']['videoId'] not in currentVideos:
                     videos.append(Post(
@@ -294,7 +310,7 @@ class Cron(webapp2.RequestHandler):
                         authorName=item['snippet']['channelTitle'],
                         ytCode=item['id']['videoId'],
                         entryContent=[''],
-                        tagList=['longboard']
+                        tagList=tagList[:5]
                     ))
 
             keys = ndb.put_multi(videos)
@@ -540,7 +556,7 @@ class Tasker():
             data = json.loads(err.fp.read())
 
 class Leader():
-    def add(self, name=False, phone=False, email=False, message=False, contact=False):
+    def add(self, name=False, phone=False, email=False, message="", contact=False):
         name = name.encode('UTF-8') if name else "Запрос скидки"
         q = {
             'fields[TITLE]': name,

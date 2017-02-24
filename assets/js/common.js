@@ -46,11 +46,24 @@
         var matches = document.cookie.match(new RegExp(
             "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
         ));
-        return matches ? decodeURIComponent(matches[1]) : undefined;
+        return matches ? decodeURIComponent(matches[1]) : false;
     };
+
+    $("input[name=phone]").inputmask("+7 (999) 999-99-99");
+
+    if (!getCookie('_ga')) {
+        $.magnificPopup.open({
+            showCloseBtn: false,
+            items: {
+                src: "#blocker-popup",
+                type: 'inline'
+            }
+        });
+    }
 
     $("form.orderform")
         .append('<input type="hidden" name="label" value="' + getCookie('_ga') + '">')
+        .append('<input type="hidden" name="sl" value="' + $(window).scrollTop() + '">')
         .submit(function (e) {
 
 
@@ -75,27 +88,24 @@
             $this.find("[type = submit]").prop('disabled', true);
 
             $.post('/order', data, function (res) {
-                if (res.status == 'ok') {
-                    $this.find("[type = submit]").prop('disabled', false);
-                    $this.get(0).reset();
-                    $.magnificPopup.open({
-                        showCloseBtn: false,
-                        items: {
-                            src: "#success-popup",
-                            type: 'inline'
-                        }
-                    });
-                } else {
-                    $this.find("[type = submit]").prop('disabled', false);
-                    $this.get(0).reset();
-                    $.magnificPopup.open({
-                        showCloseBtn: false,
-                        items: {
-                            src: "#fail-popup",
-                            type: 'inline'
-                        }
-                    });
+                var options = {
+                    showCloseBtn: false,
+                    items: {
+                        src: "#success-popup",
+                        type: 'inline'
+                    }
                 }
+                switch (res.status) {
+                    case 'nofields':
+                        options['items']['src'] = "#nofields-popup";
+                        break;
+                    case 'no':
+                        options['items']['src'] = "#fail-popup";
+                        break;
+                }
+                $.magnificPopup.open(options);
+                $this.find("[type = submit]").prop('disabled', false);
+                $this.get(0).reset();
 
                 setTimeout(function () {
                     $.magnificPopup.close();
