@@ -16,7 +16,7 @@ from google.appengine.ext import ndb, deferred
 
 from keys import *
 
-POSTS_PER_PAGE = 5
+POSTS_PER_PAGE = 6
 
 class Lead(ndb.Model):
     ga = ndb.StringProperty()
@@ -110,6 +110,7 @@ class MainPage(webapp2.RequestHandler):
         colophon = JINJA_ENVIRONMENT.get_template('colophon.html')
         scripts = JINJA_ENVIRONMENT.get_template('scripts.html')
         producttmpl = JINJA_ENVIRONMENT.get_template('product.html')
+        posttmpl = JINJA_ENVIRONMENT.get_template('post_short.html')
 
         photo_stream = self.getPhotoStream(0, 16)
 
@@ -147,6 +148,18 @@ class MainPage(webapp2.RequestHandler):
         for product in products:
             productsoutput += producttmpl.render(product)
 
+        posts = Post.query(Post.sts == 1).order(Post.sts, -Post.date).fetch(6)
+        posts = [{
+                        'postId': post.key.id(),
+                        'title': post.title,
+                        'thumbnailUrl': post.thumbnailUrl,
+                        'entryContent': post.entryContent[0]
+                    } for post in posts]
+
+        postsoutput = ""
+        for post in posts:
+            postsoutput += posttmpl.render(post)
+
         self.response.write(template.render({
             'masthead': masthead.render(),
             'colophon': colophon.render({
@@ -156,6 +169,7 @@ class MainPage(webapp2.RequestHandler):
                 'photo_stream': photo_stream
             }),
             'products': productsoutput,
+            'posts': postsoutput,
             'scripts': scripts.render({
                 'uIP': self.request.remote_addr,
                 'host': self.request.host_url
