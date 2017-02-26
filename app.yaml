@@ -22,6 +22,11 @@ handlers:
   static_files: static/\1
   upload: static/(.*\.txt)
 
+- url: /crossdomain.xml
+  mime_type: text/x-cross-domain-policy
+  static_files: static/crossdomain.xml
+  upload: static/crossdomain.xml
+
 - url: /(.*\.xml)
   mime_type: text/xml
   static_files: static/\1

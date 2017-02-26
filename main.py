@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
 
-import urllib2
-import urllib
 import json
-import jinja2
-import webapp2
+import lxml.html as LH
+import math
 import random
 import re
-import math
-import lxml.html as LH
+import urllib
+import urllib2
 
-from twilio.rest import TwilioRestClient
+import jinja2
+import webapp2
 from google.appengine.api import users
-from google.appengine.ext import ndb, deferred
+from google.appengine.ext import ndb
+from twilio.rest import TwilioRestClient
 
 from keys import *
 
 POSTS_PER_PAGE = 6
+
 
 class Lead(ndb.Model):
     ga = ndb.StringProperty()
@@ -30,11 +31,13 @@ class Lead(ndb.Model):
     leadId = ndb.IntegerProperty()
     date = ndb.DateTimeProperty(auto_now_add=True)
 
+
 class Insta(ndb.Model):
     src = ndb.StringProperty()
     link = ndb.StringProperty()
     type = ndb.IntegerProperty()
     date = ndb.DateTimeProperty(auto_now_add=True)
+
 
 class Post(ndb.Model):
     title = ndb.StringProperty()
@@ -48,6 +51,7 @@ class Post(ndb.Model):
     tagList = ndb.StringProperty(repeated=True)
     sts = ndb.IntegerProperty(default=0)
     date = ndb.DateTimeProperty(auto_now_add=True)
+
 
 class Product(ndb.Model):
     title = ndb.StringProperty()
@@ -65,6 +69,7 @@ class Product(ndb.Model):
     suspension = ndb.FloatProperty()
     price = ndb.FloatProperty()
 
+
 class Token(ndb.Model):
     title = ndb.StringProperty()
     prefix = ndb.StringProperty()
@@ -72,10 +77,12 @@ class Token(ndb.Model):
     refresh_token = ndb.StringProperty()
     date = ndb.DateTimeProperty(auto_now_add=True)
 
+
 JINJA_ENVIRONMENT = jinja2.Environment(
     loader=jinja2.FileSystemLoader('.'),
     extensions=['jinja2.ext.autoescape'],
     autoescape=False)
+
 
 class MainPage(webapp2.RequestHandler):
     def get(self):
@@ -99,7 +106,8 @@ class MainPage(webapp2.RequestHandler):
                 fp = urllib2.urlopen(url)
                 data = json.loads(fp.read())
                 ndb.delete_multi(Token.query().fetch(keys_only=True))
-                token = Token(title="Bitrix24", prefix="btrx", token=data['access_token'], refresh_token=data['refresh_token'])
+                token = Token(title="Bitrix24", prefix="btrx", token=data['access_token'],
+                              refresh_token=data['refresh_token'])
                 token.put()
                 self.redirect("/")
             except urllib2.HTTPError as err:
@@ -120,7 +128,8 @@ class MainPage(webapp2.RequestHandler):
         else:
             postscount = Post.query(Post.sts == 1).count()
 
-        request = urllib2.urlopen('https://api.instagram.com/v1/users/4538785375/?access_token={}'.format(INSTAGRAM_ACCESS_TOKEN))
+        request = urllib2.urlopen(
+            'https://api.instagram.com/v1/users/4538785375/?access_token={}'.format(INSTAGRAM_ACCESS_TOKEN))
         jsonData = json.loads(request.read())
         request.close()
 
@@ -150,11 +159,11 @@ class MainPage(webapp2.RequestHandler):
 
         posts = Post.query(Post.sts == 1).order(Post.sts, -Post.date).fetch(6)
         posts = [{
-                        'postId': post.key.id(),
-                        'title': post.title,
-                        'thumbnailUrl': post.thumbnailUrl,
-                        'entryContent': post.entryContent[0]
-                    } for post in posts]
+                     'postId': post.key.id(),
+                     'title': post.title,
+                     'thumbnailUrl': post.thumbnailUrl,
+                     'entryContent': post.entryContent[0]
+                 } for post in posts]
 
         postsoutput = ""
         for post in posts:
@@ -224,7 +233,7 @@ class MainPage(webapp2.RequestHandler):
         self.response.write(json.dumps(response))
 
     @staticmethod
-    def getPhotoStream(type, num = 18):
+    def getPhotoStream(type, num=18):
         images, next, more = Insta.query(Insta.type == type).order(Insta.date).fetch_page(64)
 
         filtered = []
@@ -236,9 +245,9 @@ class MainPage(webapp2.RequestHandler):
 
         random.shuffle(images)
         return [{
-             'src': photo.src,
-             'url': photo.link,
-         } for photo in images[:num]]
+                    'src': photo.src,
+                    'url': photo.link,
+                } for photo in images[:num]]
 
     @staticmethod
     def sendSMS(key, leadId):
@@ -250,6 +259,7 @@ class MainPage(webapp2.RequestHandler):
             body="Создан заказ: {}, номер лида: {}".format(key.id(), leadId),
         )
         pass
+
 
 class Cron(webapp2.RequestHandler):
     def get(self):
@@ -269,21 +279,30 @@ class Cron(webapp2.RequestHandler):
                 root = LH.fromstring(request.read())
                 request.close()
 
-                jsonData = json.loads(root.xpath('//script[contains(text(), "window._sharedData")]')[0].text.replace('window._sharedData = ', '').replace(';', ''))
-                images = [Insta(link='https://www.instagram.com/p/{}'.format(img['code']), src=img['thumbnail_src'], type=0) for img in jsonData['entry_data']['TagPage'][0]['tag']['media']['nodes'] if 'https://www.instagram.com/p/{}'.format(img['code']) not in currentImages]
+                jsonData = json.loads(root.xpath('//script[contains(text(), "window._sharedData")]')[0].text.replace(
+                    'window._sharedData = ', '').replace(';', ''))
+                images = [
+                    Insta(link='https://www.instagram.com/p/{}'.format(img['code']), src=img['thumbnail_src'], type=0)
+                    for img in jsonData['entry_data']['TagPage'][0]['tag']['media']['nodes'] if
+                    'https://www.instagram.com/p/{}'.format(img['code']) not in currentImages]
                 keys = ndb.put_multi(images)
 
         if path == '/getmine':
             user = users.get_current_user()
-            request = urllib2.urlopen('https://api.instagram.com/v1/users/4538785375/media/recent?count=12&access_token={}'.format(INSTAGRAM_ACCESS_TOKEN))
+            request = urllib2.urlopen(
+                'https://api.instagram.com/v1/users/4538785375/media/recent?count=12&access_token={}'.format(
+                    INSTAGRAM_ACCESS_TOKEN))
             jsonData = json.loads(request.read())
             request.close()
 
-            images = [Insta(link=img['link'], src=img['images']['thumbnail']['url'], type=1) for img in jsonData['data'] if img['link'] not in currentImages]
+            images = [Insta(link=img['link'], src=img['images']['thumbnail']['url'], type=1) for img in jsonData['data']
+                      if img['link'] not in currentImages]
             keys = ndb.put_multi(images)
 
         if path == '/getvideos':
-            fp = urllib2.urlopen('https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=15&type=video&q=Лонгбординг&relevanceLanguage=ru&regionCode=RU&key={}'.format(YT_TOKEN))
+            fp = urllib2.urlopen(
+                'https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=15&type=video&q=Лонгбординг&relevanceLanguage=ru&regionCode=RU&key={}'.format(
+                    YT_TOKEN))
             jsonData = json.loads(fp.read())
 
             videos = []
@@ -329,8 +348,10 @@ class Cron(webapp2.RequestHandler):
             Tasker.refreshToken()
             pass
 
+
 def sendSMS(key, leadId):
     return MainPage.sendSMS(key, leadId)
+
 
 class Blog(webapp2.RequestHandler):
     def get(self):
@@ -350,11 +371,13 @@ class Blog(webapp2.RequestHandler):
         admin = users.is_current_user_admin()
 
         if admin:
-            posts, next, more = Post.query(Post.sts < 2).order(Post.sts, -Post.date).fetch_page(POSTS_PER_PAGE, offset=offset)
+            posts, next, more = Post.query(Post.sts < 2).order(Post.sts, -Post.date).fetch_page(POSTS_PER_PAGE,
+                                                                                                offset=offset)
             pages = Post.query(Post.sts < 2).count()
             postscount = pages
         else:
-            posts, next, more = Post.query(Post.sts == 1).order(Post.sts, -Post.date).fetch_page(POSTS_PER_PAGE, offset=offset)
+            posts, next, more = Post.query(Post.sts == 1).order(Post.sts, -Post.date).fetch_page(POSTS_PER_PAGE,
+                                                                                                 offset=offset)
             pages = Post.query(Post.sts == 1).count()
             postscount = pages
 
@@ -387,7 +410,8 @@ class Blog(webapp2.RequestHandler):
         for post in posts:
             postsoutput += posttmpl.render(post)
 
-        request = urllib2.urlopen('https://api.instagram.com/v1/users/4538785375/?access_token={}'.format(INSTAGRAM_ACCESS_TOKEN))
+        request = urllib2.urlopen(
+            'https://api.instagram.com/v1/users/4538785375/?access_token={}'.format(INSTAGRAM_ACCESS_TOKEN))
         jsonData = json.loads(request.read())
         request.close()
 
@@ -414,6 +438,7 @@ class Blog(webapp2.RequestHandler):
             })
         }))
 
+
 class EditPost(webapp2.RequestHandler):
     def post(self):
         admin = users.is_current_user_admin()
@@ -437,6 +462,7 @@ class EditPost(webapp2.RequestHandler):
             post.tagList = tagList.split(',')
             post.put()
             task = Tasker().update(post.taskId)
+
     def get(self):
         admin = users.is_current_user_admin()
         if admin:
@@ -458,9 +484,11 @@ class EditPost(webapp2.RequestHandler):
                 self.response.headers['Content-Type'] = 'text/html'
                 self.response.write(post.sts)
 
+
 class Ga(webapp2.RequestHandler):
     def get(self):
         urllib2.urlopen("http://www.google-analytics.com/r/collect?{}".format(self.request.query))
+
 
 class Login(webapp2.RequestHandler):
     def get(self):
@@ -470,11 +498,13 @@ class Login(webapp2.RequestHandler):
             url = users.CreateLogoutURL('/')
         self.redirect(url)
 
+
 class Tasker():
     token = Token.query().get().token
     refresh_token = Token.query().get().refresh_token
+
     def add(self, title, descr):
-        q  = {
+        q = {
             'TASKDATA[TITLE]': title,
             'TASKDATA[DESCRIPTION]': descr,
             'TASKDATA[RESPONSIBLE_ID]': 1,
@@ -492,7 +522,7 @@ class Tasker():
             return False
 
     def renew(self, taskId):
-        q  = {
+        q = {
             'TASKID': taskId,
             'auth': Tasker.token
         }
@@ -506,7 +536,7 @@ class Tasker():
             return False
 
     def update(self, taskId):
-        q  = {
+        q = {
             'TASKID': taskId,
             'auth': Tasker.token
         }
@@ -550,10 +580,12 @@ class Tasker():
             fp = urllib2.urlopen(url)
             data = json.loads(fp.read())
             ndb.delete_multi(Token.query().fetch(keys_only=True))
-            token = Token(title="Bitrix24", prefix="btrx", token=data['access_token'], refresh_token=data['refresh_token'])
+            token = Token(title="Bitrix24", prefix="btrx", token=data['access_token'],
+                          refresh_token=data['refresh_token'])
             token.put()
         except urllib2.HTTPError as err:
             data = json.loads(err.fp.read())
+
 
 class Leader():
     def add(self, name=False, phone=False, email=False, message="", contact=False):
@@ -581,6 +613,7 @@ class Leader():
                 return False
         except UnicodeEncodeError as err:
             pass
+
 
 app = webapp2.WSGIApplication([
     ('/', MainPage),

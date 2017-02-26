@@ -5,20 +5,21 @@
             <time datetime="{{ date }}">{{ month }} <span>{{ day }}</span></time>
         </div><!-- /.entry-date -->
         <div class="media-body">
-            <a href="/blog.html#post-{{ postId }}"><h2 class="entry-title" itemprop="name">{{ title }}</h2></a>
+            <a href="/blog.html#post-{{ postId }}" itemprop="url"><h2 class="entry-title" itemprop="name">{{ title }}</h2></a>
             <!--<meta itemprop="contentUrl" content="https://www.youtube.com/watch?v={{ ytCode }}">-->
+            <meta itemprop="isFamilyFriendly" content="True">
             <meta itemprop="duration" content="{{ duration }}">
-            <meta itemprop="thumbnailUrl" content="{{ thumbnailUrl }}">
             <meta itemprop="uploadDate" content="{{ uploadDate }}">
+
+            <img src="{{ thumbnailUrl }}" itemprop="thumbnail" style="display: none" />
+            <img src="{{ thumbnailUrl }}" itemprop="thumbnailUrl" style="display: none" />
             <!-- /.entry-title -->
             <div class="share-post pull-right">
                 <ul class="share-list">
-                    <li><a href="#"><i class="fa fa-vk"></i></a></li>
-                    <li><a href="#"><i class="fa fa-facebook"></i></a></li>
-                    <li><a href="#"><i class="fa fa-odnoklassniki"></i></a></li>
-                    <li><a href="#"><i class="fa fa-twitter"></i></a></li>
-                    <li><a href="#"><i class="fa fa-google-plus"></i></a></li>
-                    <li><a href="#"><i class="fa fa-pinterest"></i></a></li>
+                    <li><a href="#" onclick="Share.vkontakte('http://longbrd.ru/blog.html#post-{{ postId }}','{{ title }}','{{ thumbnailUrl }}',''); return false;"><i class="fa fa-vk"></i></a></li>
+                    <li><a href="#" onclick="Share.facebook('http://longbrd.ru/blog.html#post-{{ postId }}','{{ title }}','{{ thumbnailUrl }}',''); return false;"><i class="fa fa-facebook"></i></a></li>
+                    <li><a href="#" onclick="Share.odnoklassniki('http://longbrd.ru/blog.html#post-{{ postId }}','{{ title }}','{{ thumbnailUrl }}',''); return false;"><i class="fa fa-odnoklassniki"></i></a></li>
+                    <li><a href="#" onclick="Share.twitter('http://longbrd.ru/blog.html#post-{{ postId }}','{{ title }}','{{ thumbnailUrl }}',''); return false;"><i class="fa fa-twitter"></i></a></li>
                 </ul>
             </div><!-- /.share-post -->
             <div class="post-meta clearfix">
@@ -41,7 +42,7 @@
 
     <div class="post-content" itemprop="description">
         <div class="embed-responsive embed-responsive-16by9">
-            <iframe width="560" height="315" src="https://www.youtube.com/embed/{{ ytCode }}" frameborder="0" allowfullscreen></iframe>
+            <iframe width="560" height="315" src="//www.youtube.com/embed/{{ ytCode }}" frameborder="0" allowfullscreen></iframe>
         </div><!-- /.post-thumbnail -->
         <div class="entry-content">
         {% for item in entryContent %}
@@ -66,7 +67,7 @@
                 <li><i class="stsicon fa fa-check{% if sts %} fa-check-circle{% endif %}" aria-hidden="true"></i></li>
                 <li><input type="submit" class="btn-link" value="Применить"></li>
                 <li><input type="button" data-postid="{{ postId }}" class="btn-link publish" value="Опубликовать"></li>
-                <li><input type="button" data-postid="{{ postId }}"class="btn-link remove" value="Удалить"></li>
+                <li><input type="button" data-postid="{{ postId }}" class="btn-link remove" value="Удалить"></li>
             </ul><!-- /.tag-list -->
         </div><!-- /.post-tag -->
         {% endif %}

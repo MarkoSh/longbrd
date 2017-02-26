@@ -19,7 +19,6 @@
         m.parentNode.insertBefore(a, m)
     })(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
     ga('create', 'UA-62655744-3', 'auto');
-    ga('set', 'dimension4', 1);
     ga('set', 'dimension5', uIP);
 
     $(".itemFilter a, .load-more").click(function (e) {
@@ -42,6 +41,11 @@
         ga("send", "event", "Клики", "Поделиться " + $this.find('i').attr('class'), host, 0);
     });
 
+    $(".pagination a").click(function (e) {
+        var $this = $(this);
+        ga("send", "event", "Клики", "Страница " + $this.text(), host, 0);
+    });
+
     var getCookie = function (name) {
         var matches = document.cookie.match(new RegExp(
             "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
@@ -50,16 +54,20 @@
     };
 
     $("input[name=phone]").inputmask("+7 (999) 999-99-99");
+    $("input[name=email]").inputmask("email");
 
-    if (!getCookie('_ga')) {
-        $.magnificPopup.open({
-            showCloseBtn: false,
-            items: {
-                src: "#blocker-popup",
-                type: 'inline'
-            }
-        });
-    }
+    setTimeout(function () {
+        if (!getCookie('_ga')) {
+            ga('set', 'dimension4', 1);
+            $.magnificPopup.open({
+                showCloseBtn: false,
+                items: {
+                    src: "#blocker-popup",
+                    type: 'inline'
+                }
+            });
+        }
+    }, 3000);
 
     $("form.orderform")
         .append('<input type="hidden" name="label" value="' + getCookie('_ga') + '">')
@@ -274,25 +282,70 @@
         $("#masthead #main-menu").onePageNav(), i()
     });
 
-    $('#waypoint').waypoint({
-        handler: function (direction) {
-            if (direction == 'down') {
-                var active = $('.pagination li.active');
-                var next = active.next();
-                if (next.length) {
-                    active.removeClass('active');
-                    next.addClass('active');
-                    var href = next.find('a').attr('href');
-                    $.get(href, function (res) {
-                        $('.posts-wrapper').append($('.posts-wrapper', res).html());
-                        history.pushState(null, null, href);
-                        Waypoint.refreshAll();
-                        $("body").trigger('scrolled');
-                    });
-                }
-            }
-
-        },
-        offset: "100%"
-    });
+    // $('#waypoint').waypoint({
+    //     handler: function (direction) {
+    //         if (direction == 'down') {
+    //             var active = $('.pagination li.active');
+    //             var next = active.next();
+    //             if (next.length) {
+    //                 active.removeClass('active');
+    //                 next.addClass('active');
+    //                 var href = next.find('a').attr('href');
+    //                 $.get(href, function (res) {
+    //                     $('.posts-wrapper').append($('.posts-wrapper', res).html());
+    //                     history.pushState(null, null, href);
+    //                     Waypoint.refreshAll();
+    //                     $("body").trigger('scrolled');
+    //                 });
+    //             }
+    //         }
+    //
+    //     },
+    //     offset: "100%"
+    // });
 })(jQuery);
+
+var Share = {
+    vkontakte: function(purl, ptitle, pimg, text) {
+        url  = 'http://vkontakte.ru/share.php?';
+        url += 'url='          + encodeURIComponent(purl);
+        url += '&title='       + encodeURIComponent(ptitle);
+        url += '&description=' + encodeURIComponent(text);
+        url += '&image='       + encodeURIComponent(pimg);
+        url += '&noparse=true';
+        Share.popup(url);
+    },
+    odnoklassniki: function(purl, text) {
+        url  = 'http://www.odnoklassniki.ru/dk?st.cmd=addShare&st.s=1';
+        url += '&st.comments=' + encodeURIComponent(text);
+        url += '&st._surl='    + encodeURIComponent(purl);
+        Share.popup(url);
+    },
+    facebook: function(purl, ptitle, pimg, text) {
+        url  = 'http://www.facebook.com/sharer.php?s=100';
+        url += '&p[title]='     + encodeURIComponent(ptitle);
+        url += '&p[summary]='   + encodeURIComponent(text);
+        url += '&p[url]='       + encodeURIComponent(purl);
+        url += '&p[images][0]=' + encodeURIComponent(pimg);
+        Share.popup(url);
+    },
+    twitter: function(purl, ptitle) {
+        url  = 'http://twitter.com/share?';
+        url += 'text='      + encodeURIComponent(ptitle);
+        url += '&url='      + encodeURIComponent(purl);
+        url += '&counturl=' + encodeURIComponent(purl);
+        Share.popup(url);
+    },
+    mailru: function(purl, ptitle, pimg, text) {
+        url  = 'http://connect.mail.ru/share?';
+        url += 'url='          + encodeURIComponent(purl);
+        url += '&title='       + encodeURIComponent(ptitle);
+        url += '&description=' + encodeURIComponent(text);
+        url += '&imageurl='    + encodeURIComponent(pimg);
+        Share.popup(url);
+    },
+
+    popup: function(url) {
+        window.open(url,'','toolbar=0,status=0,width=626,height=436');
+    }
+};
