@@ -71,11 +71,9 @@
 
     $("form.orderform")
         .append('<input type="hidden" name="label" value="' + getCookie('_ga') + '">')
-        .append('<input type="hidden" name="sl" value="' + $(window).scrollTop() + '">')
         .submit(function (e) {
-
-
             var $this = $(this);
+            $this.append('<input type="hidden" name="sl" value="' + $(window).scrollTop() + '">')
 
             if ($this.attr('id') == 'search') {
                 return false;

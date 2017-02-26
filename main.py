@@ -12,6 +12,7 @@ import jinja2
 import webapp2
 from google.appengine.api import users
 from google.appengine.ext import ndb
+from google.appengine.ext import deferred
 from twilio.rest import TwilioRestClient
 
 from keys import *
@@ -86,9 +87,8 @@ JINJA_ENVIRONMENT = jinja2.Environment(
 
 class MainPage(webapp2.RequestHandler):
     def get(self):
-        self.response.headers['Content-Type'] = 'text/html'
 
-        token = Token.query().get().token
+        self.response.headers['Content-Type'] = 'text/html'
 
         if self.request.get('code'):
             code = self.request.get('code')
@@ -197,30 +197,20 @@ class MainPage(webapp2.RequestHandler):
             contact = self.request.get('discount')
 
             if phone or email or contact:
-                leader = Leader()
-                leadId = leader.add(
-                    name=name if name else False,
-                    phone=phone if phone else False,
-                    email=email,
-                    message=message,
-                    contact=contact
-                )
-                lead = Lead(
-                    ga=label,
-                    name=name,
-                    phone=phone,
-                    email=email,
-                    message=message,
-                    contact=contact,
-                    leadId=leadId,
-                    ip=self.request.remote_addr
-                )
+                data = {
+                    'label': label,
+                    'sl': sl,
+                    'name': name,
+                    'phone': phone,
+                    'email': email,
+                    'message': message,
+                    'contact': contact,
+                    'ip': self.request.remote_addr
+                }
 
-                key = lead.put()
+                task = deferred.defer(addLead, data)
 
-                # deferred.defer(sendSMS, key, leadId)
-
-                response['leadId'] = leadId
+                response['deferred'] = task.name
             else:
                 response['status'] = "nofields"
         else:
@@ -349,8 +339,34 @@ class Cron(webapp2.RequestHandler):
             pass
 
 
+def addLead(data):
+    leader = Leader()
+    leadId = leader.add(
+        name=data['name'] if data['name'] else False,
+        phone=data['phone'] if data['phone'] else False,
+        email=data['email'],
+        message=data['message'],
+        contact=data['contact'],
+        ip=data['ip'],
+        ga=data['label']
+    )
+    lead = Lead(
+        ga=data['label'],
+        name=data['name'],
+        phone=data['phone'],
+        email=data['email'],
+        message=data['message'],
+        contact=data['contact'],
+        leadId=leadId,
+        ip=data['ip']
+    )
+    key = lead.put()
+    pass
+
+
 def sendSMS(key, leadId):
-    return MainPage.sendSMS(key, leadId)
+    MainPage.sendSMS(key, leadId)
+    pass
 
 
 class Blog(webapp2.RequestHandler):
@@ -588,16 +604,26 @@ class Tasker():
 
 
 class Leader():
-    def add(self, name=False, phone=False, email=False, message="", contact=False):
+    def add(self,
+            name=False,
+            phone=False,
+            email=False,
+            message="",
+            contact=False,
+            ip=None,
+            ga=None
+            ):
         name = name.encode('UTF-8') if name else "Запрос скидки"
         q = {
             'fields[TITLE]': name,
             'fields[NAME]': contact if contact else name,
-            'fields[PHONE][0][VALUE]': phone,
+            'fields[PHONE][0][VALUE]': phone if phone else '',
             'fields[PHONE][0][VALUE_TYPE]': "OTHER",
-            'fields[EMAIL][0][VALUE]': email if email else contact,
+            'fields[EMAIL][0][VALUE]': email if email else contact if contact else '',
             'fields[EMAIL][0][VALUE_TYPE]': "OTHER",
             'fields[COMMENTS]': message.encode('UTF-8'),
+            'fields[UF_CRM_IP]': ip, # После добавления в битрикс полей через АПИ у них такое имя, если добавлять через админку - там все печально, придется назначать иды
+            'fields[UF_CRM_GA]': ga, # После добавления в битрикс полей через АПИ у них такое имя, если добавлять через админку - там все печально, придется назначать иды
             'params[REGISTER_SONET_EVENT]': "Y",
             'auth': Tasker.token
         }
