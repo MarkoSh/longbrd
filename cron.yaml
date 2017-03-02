@@ -13,4 +13,4 @@ cron:
 
 - description: Обновление токена bitrix24
   url: /getnewtoken
-  schedule: every 1 hours
+  schedule: every 30 minutes

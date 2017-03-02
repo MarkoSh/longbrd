@@ -7,12 +7,15 @@ import random
 import re
 import urllib
 import urllib2
+import copy
+import datetime
+import time
 
 import jinja2
 import webapp2
 from google.appengine.api import users
-from google.appengine.ext import ndb
 from google.appengine.ext import deferred
+from google.appengine.ext import ndb
 from twilio.rest import TwilioRestClient
 
 from keys import *
@@ -208,9 +211,10 @@ class MainPage(webapp2.RequestHandler):
                     'ip': self.request.remote_addr
                 }
 
-                task = deferred.defer(addLead, data)
+                # task = deferred.defer(addLead, data)
 
-                response['deferred'] = task.name
+                # response['deferred'] = task.name
+                response['lead'] = addLead(data)
             else:
                 response['status'] = "nofields"
         else:
@@ -220,7 +224,7 @@ class MainPage(webapp2.RequestHandler):
 
     def respond_json(self, response={'status': "ok"}):
         self.response.headers['Content-Type'] = 'application/json'
-        self.response.write(json.dumps(response))
+        self.response.write(response)
 
     @staticmethod
     def getPhotoStream(type, num=18):
@@ -278,21 +282,34 @@ class Cron(webapp2.RequestHandler):
                 keys = ndb.put_multi(images)
 
         if path == '/getmine':
-            user = users.get_current_user()
-            request = urllib2.urlopen(
-                'https://api.instagram.com/v1/users/4538785375/media/recent?count=12&access_token={}'.format(
-                    INSTAGRAM_ACCESS_TOKEN))
-            jsonData = json.loads(request.read())
-            request.close()
+            q = {
+                'count': 12,
+                'access_token': '{}'.format(INSTAGRAM_ACCESS_TOKEN)
+            }
+            q = urllib.urlencode(q)
+            url = 'https://api.instagram.com/v1/users/4538785375/media/recent?{}'.format(q)
+
+            fp = urllib2.urlopen(url)
+            jsonData = json.loads(fp.read())
 
             images = [Insta(link=img['link'], src=img['images']['thumbnail']['url'], type=1) for img in jsonData['data']
                       if img['link'] not in currentImages]
             keys = ndb.put_multi(images)
 
         if path == '/getvideos':
-            fp = urllib2.urlopen(
-                'https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=15&type=video&q=Лонгбординг&relevanceLanguage=ru&regionCode=RU&key={}'.format(
-                    YT_TOKEN))
+            q = {
+                'part': 'snippet',
+                'maxResults': '15',
+                'type': 'video',
+                'q': 'Лонгбординг',
+                'relevanceLanguage': 'ru',
+                'regionCode': 'RU',
+                'key': '{}'.format(YT_TOKEN)
+            }
+            q = urllib.urlencode(q)
+            url = 'https://www.googleapis.com/youtube/v3/search?{}'.format(q)
+
+            fp = urllib2.urlopen(url)
             jsonData = json.loads(fp.read())
 
             videos = []
@@ -302,7 +319,6 @@ class Cron(webapp2.RequestHandler):
                 'лонгбординг',
                 'скейтбординг',
                 'скорость',
-                'ветер',
                 'даунхилл',
                 'longboard',
                 'skateboard',
@@ -339,7 +355,9 @@ class Cron(webapp2.RequestHandler):
             pass
 
 
-def addLead(data):
+def addLead(data, tries = 0):
+    Tasker.refreshToken()
+
     leader = Leader()
     leadId = leader.add(
         name=data['name'] if data['name'] else False,
@@ -350,6 +368,14 @@ def addLead(data):
         ip=data['ip'],
         ga=data['label']
     )
+    return {
+        'leadid': leadId
+    }
+    if not leadId:
+        if tries < 10:
+            tries += 1
+            time.sleep(5)
+            return addLead(data, tries)
     lead = Lead(
         ga=data['label'],
         name=data['name'],
@@ -361,7 +387,10 @@ def addLead(data):
         ip=data['ip']
     )
     key = lead.put()
-    pass
+    return {
+        'leadid': leadId,
+        'key': key.id()
+    }
 
 
 def sendSMS(key, leadId):
@@ -519,6 +548,8 @@ class Tasker():
     token = Token.query().get().token
     refresh_token = Token.query().get().refresh_token
 
+    tries = 0
+
     def add(self, title, descr):
         q = {
             'TASKDATA[TITLE]': title,
@@ -533,9 +564,11 @@ class Tasker():
             fp = urllib2.urlopen(url)
             data = json.loads(fp.read())
             return data['result']
-        except urllib2.HTTPError as err:
-            data = json.loads(err.fp.read())
-            return False
+        except BaseException as err:
+            if self.tries < 10:
+                self.tries += 1
+                time.sleep(5)
+                return self.add(title, descr)
 
     def renew(self, taskId):
         q = {
@@ -547,9 +580,11 @@ class Tasker():
             url = "https://longbord.bitrix24.ru/rest/task.item.renew.json?{}".format(q)
             fp = urllib2.urlopen(url)
             data = json.loads(fp.read())
-        except urllib2.HTTPError as err:
-            data = json.loads(err.fp.read())
-            return False
+        except BaseException as err:
+            if self.tries < 10:
+                self.tries += 1
+                time.sleep(5)
+                return self.renew(taskId)
 
     def update(self, taskId):
         q = {
@@ -562,9 +597,11 @@ class Tasker():
             fp = urllib2.urlopen(url)
             data = json.loads(fp.read())
             return data['result']
-        except urllib2.HTTPError as err:
-            data = json.loads(err.fp.read())
-            return False
+        except BaseException as err:
+            if self.tries < 10:
+                self.tries += 1
+                time.sleep(5)
+                return self.update(taskId)
 
     def delete(self, taskId):
         q = {
@@ -577,9 +614,11 @@ class Tasker():
             fp = urllib2.urlopen(url)
             data = json.loads(fp.read())
             return data['result']
-        except urllib2.HTTPError as err:
-            data = json.loads(err.fp.read())
-            return False
+        except BaseException as err:
+            if self.tries < 10:
+                self.tries += 1
+                time.sleep(5)
+                return self.delete(taskId)
 
     @staticmethod
     def refreshToken():
@@ -599,11 +638,16 @@ class Tasker():
             token = Token(title="Bitrix24", prefix="btrx", token=data['access_token'],
                           refresh_token=data['refresh_token'])
             token.put()
-        except urllib2.HTTPError as err:
-            data = json.loads(err.fp.read())
+        except BaseException as err:
+            if Tasker.tries < 10:
+                Tasker.tries += 1
+                time.sleep(5)
+                return Tasker.refreshToken()
 
 
 class Leader():
+    tries = 0
+
     def add(self,
             name=False,
             phone=False,
@@ -613,7 +657,8 @@ class Leader():
             ip=None,
             ga=None
             ):
-        name = name.encode('UTF-8') if name else "Запрос скидки"
+        name = name.encode('utf-8') if name else u"Заявка на скидку".encode('utf-8')
+        contact = contact.encode('utf-8')
         q = {
             'fields[TITLE]': name,
             'fields[NAME]': contact if contact else name,
@@ -621,40 +666,129 @@ class Leader():
             'fields[PHONE][0][VALUE_TYPE]': "OTHER",
             'fields[EMAIL][0][VALUE]': email if email else contact if contact else '',
             'fields[EMAIL][0][VALUE_TYPE]': "OTHER",
-            'fields[COMMENTS]': message.encode('UTF-8'),
-            'fields[UF_CRM_IP]': ip, # После добавления в битрикс полей через АПИ у них такое имя, если добавлять через админку - там все печально, придется назначать иды
-            'fields[UF_CRM_GA]': ga, # После добавления в битрикс полей через АПИ у них такое имя, если добавлять через админку - там все печально, придется назначать иды
+            'fields[COMMENTS]': message,
+            'fields[UF_CRM_IP]': ip,
+            # После добавления в битрикс полей через АПИ у них такое имя, если добавлять через админку - там все печально, придется назначать иды
+            'fields[UF_CRM_GA]': ga,
+            # После добавления в битрикс полей через АПИ у них такое имя, если добавлять через админку - там все печально, придется назначать иды
             'params[REGISTER_SONET_EVENT]': "Y",
-            'auth': Tasker.token
+            # 'auth': Tasker.token
         }
         try:
-            q = urllib.urlencode(q)
+            # q = urllib.urlencode(q)
             try:
-                url = "https://longbord.bitrix24.ru/rest/crm.lead.add.json?{}".format(q)
-                fp = urllib2.urlopen(url)
+                url = "https://longbord.bitrix24.ru/rest/crm.lead.add.json?auth".format(Tasker.token)
+                req = urllib2.Request(url=url, data=q)
+                fp = urllib2.urlopen(req)
                 data = json.loads(fp.read())
                 return data['result']
-            except urllib2.HTTPError as err:
-                data = json.loads(err.fp.read())
-                return False
-        except UnicodeEncodeError as err:
+            except BaseException as err:
+                if self.tries < 1:
+                    self.tries += 1
+                    time.sleep(5)
+                    return self.add(name, phone, email, message, contact, ip, ga)
+        except UnicodeDecodeError as err:
+            return {
+                'error': err
+            }
+
+
+# class BTX24(webapp2.RequestHandler):
+#     def get(self, func, params):
+#         q = {
+#             'auth': Tasker.token
+#         }
+#         q = urllib.urlencode(q)
+#         try:
+#             url = "https://longbord.bitrix24.ru/rest/{}?{}".format(func, q)
+#             fp = urllib2.urlopen(url)
+#             data = json.loads(fp.read())
+#             pass
+#         except urllib2.HTTPError as err:
+#             data = json.loads(err.fp.read())
+#             pass
+
+
+class Exporter(webapp2.RequestHandler):
+    def get(self, type):
+        admin = users.is_current_user_admin()
+        models = {
+            'leads': Lead(),
+            'insta': Insta(),
+            'posts': Post(),
+            'products': Product(),
+            # 'token': Token()
+        }
+        data = []
+        if type in models:
+            data = [item.to_dict() for item in models[type].query().fetch()]
+
+        str = json.dumps(data, default=Exporter.datetime_parser)
+        return self.response_json(str)
+
+    @staticmethod
+    def datetime_parser(dct):
+        return dct.isoformat()
+
+    def response_json(self, str):
+        self.response.headers['Content-Type'] = 'application/json'
+        self.response.write(str)
+
+
+class Importer(webapp2.RequestHandler):
+    def get(self, type):
+        if 'localhost' in self.request.host:
             pass
+        return
+        admin = users.is_current_user_admin()
+        if admin:
+            models = {
+                'leads': Lead(),
+                'insta': Insta(),
+                'posts': Post(),
+                'products': Product(),
+                'token': Token()
+            }
+            if type in models:
+                url = 'http://longbrd.ru/export.{}'.format(type)
+
+                fp = urllib2.urlopen(url)
+                data = json.loads(fp.read())
+
+                objects = []
+                for line in data:
+                    object = models[type]
+                    for i, val in line.items():
+                        if i == 'date':
+                            val = datetime.datetime.strptime(val, "%Y-%m-%dT%H:%M:%S.%f")
+                        setattr(object, i, val)
+                    objects.append(copy.deepcopy(object))
+                ndb.put_multi(objects)
 
 
 app = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/order', MainPage),
+
     ('/ga', Ga),
+
     ('/blog.html', Blog),
     ('/blog-\d+.html', Blog),
+
     ('/savepost', EditPost),
     ('/removepost', EditPost),
     ('/publishpost', EditPost),
+
     ('/loginmepls', Login),
     ('/logoutmepls', Login),
 
     ('/getstream', Cron),
     ('/getmine', Cron),
     ('/getvideos', Cron),
-    ('/getnewtoken', Cron)
+    ('/getnewtoken', Cron),
+
+    (r'/export.(.+)', Exporter),
+    # (r'/import.(.+)', Importer),
+
+    # (r'/btx24/(.+)/(.+|)', BTX24)
 ], debug=True)

@@ -70,10 +70,12 @@
     }, 3000);
 
     $("form.orderform")
-        .append('<input type="hidden" name="label" value="' + getCookie('_ga') + '">')
+        .append('<input type="hidden" name="label" value="">')
+        .append('<input type="hidden" name="sl" value="">')
         .submit(function (e) {
             var $this = $(this);
-            $this.append('<input type="hidden" name="sl" value="' + $(window).scrollTop() + '">')
+            $this.find('[name=sl]').val($(window).scrollTop());
+            $this.find('[name=label]').val(getCookie('_ga'));
 
             if ($this.attr('id') == 'search') {
                 return false;
@@ -175,7 +177,7 @@
                     mapTypeControl: !0,
                     mapTypeControlOptions: {style: google.maps.MapTypeControlStyle.DROPDOWN_MENU},
                     navigationControl: !0,
-                    scrollwheel: !0,
+                    scrollwheel: 0,
                     streetViewControl: !0
                 };
                 e() && (i.draggable = !0), $("#googleMaps").gmap3({
