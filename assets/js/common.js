@@ -96,6 +96,7 @@
             $this.find("[type = submit]").prop('disabled', true);
 
             $.post('/order', data, function (res) {
+                console.warn('success');
                 var options = {
                     showCloseBtn: false,
                     items: {

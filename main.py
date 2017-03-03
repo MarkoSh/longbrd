@@ -211,10 +211,10 @@ class MainPage(webapp2.RequestHandler):
                     'ip': self.request.remote_addr
                 }
 
-                # task = deferred.defer(addLead, data)
+                task = deferred.defer(addLead, data)
 
-                # response['deferred'] = task.name
-                response['lead'] = addLead(data)
+                response['deferred'] = task.name
+                # response['lead'] = addLead(data)
             else:
                 response['status'] = "nofields"
         else:
@@ -224,7 +224,8 @@ class MainPage(webapp2.RequestHandler):
 
     def respond_json(self, response={'status': "ok"}):
         self.response.headers['Content-Type'] = 'application/json'
-        self.response.write(response)
+        self.response.write(json.dumps(response))
+        # self.response.write(response)
 
     @staticmethod
     def getPhotoStream(type, num=18):
@@ -659,54 +660,49 @@ class Leader():
             ):
         name = name.encode('utf-8') if name else u"Заявка на скидку".encode('utf-8')
         contact = contact.encode('utf-8')
+        phone = phone.encode('utf-8')
+        email = email.encode('utf-8')
+        message = message.encode('utf-8')
         q = {
             'fields[TITLE]': name,
             'fields[NAME]': contact if contact else name,
             'fields[PHONE][0][VALUE]': phone if phone else '',
             'fields[PHONE][0][VALUE_TYPE]': "OTHER",
-            'fields[EMAIL][0][VALUE]': email if email else contact if contact else '',
+            'fields[EMAIL][0][VALUE]': email if email else '',
             'fields[EMAIL][0][VALUE_TYPE]': "OTHER",
             'fields[COMMENTS]': message,
             'fields[UF_CRM_IP]': ip,
-            # После добавления в битрикс полей через АПИ у них такое имя, если добавлять через админку - там все печально, придется назначать иды
             'fields[UF_CRM_GA]': ga,
-            # После добавления в битрикс полей через АПИ у них такое имя, если добавлять через админку - там все печально, придется назначать иды
-            'params[REGISTER_SONET_EVENT]': "Y",
-            # 'auth': Tasker.token
+            'fields[UF_CRM_CONTACT]': contact,
+            'params[REGISTER_SONET_EVENT]': "Y"
         }
         try:
-            # q = urllib.urlencode(q)
-            try:
-                url = "https://longbord.bitrix24.ru/rest/crm.lead.add.json?auth".format(Tasker.token)
-                req = urllib2.Request(url=url, data=q)
-                fp = urllib2.urlopen(req)
-                data = json.loads(fp.read())
-                return data['result']
-            except BaseException as err:
-                if self.tries < 1:
-                    self.tries += 1
-                    time.sleep(5)
-                    return self.add(name, phone, email, message, contact, ip, ga)
-        except UnicodeDecodeError as err:
-            return {
-                'error': err
-            }
+            q = urllib.urlencode(q)
+            url = "https://longbord.bitrix24.ru/rest/crm.lead.add.json?auth={}".format(Tasker.token)
+            req = urllib2.Request(url=url, data=q)
+            fp = urllib2.urlopen(req)
+            data = json.loads(fp.read())
+            return data['result']
+        except urllib2.HTTPError as err:
+            if self.tries < 1:
+                self.tries += 1
+                time.sleep(5)
+                return self.add(name, phone, email, message, contact, ip, ga)
+            return json.loads(err.read())
 
 
-# class BTX24(webapp2.RequestHandler):
-#     def get(self, func, params):
-#         q = {
-#             'auth': Tasker.token
-#         }
-#         q = urllib.urlencode(q)
-#         try:
-#             url = "https://longbord.bitrix24.ru/rest/{}?{}".format(func, q)
-#             fp = urllib2.urlopen(url)
-#             data = json.loads(fp.read())
-#             pass
-#         except urllib2.HTTPError as err:
-#             data = json.loads(err.fp.read())
-#             pass
+class BTX24(webapp2.RequestHandler):
+    def get(self, func, params):
+        Tasker.refreshToken()
+        try:
+            url = "https://longbord.bitrix24.ru/rest/{}?auth={}".format(func, Tasker.token)
+            req = urllib2.Request(url=url, data=params)
+            fp = urllib2.urlopen(req)
+            data = json.loads(fp.read())
+            pass
+        except urllib2.HTTPError as err:
+            data = json.loads(err.fp.read())
+            pass
 
 
 class Exporter(webapp2.RequestHandler):
@@ -717,7 +713,7 @@ class Exporter(webapp2.RequestHandler):
             'insta': Insta(),
             'posts': Post(),
             'products': Product(),
-            # 'token': Token()
+            'token': Token()
         }
         data = []
         if type in models:
@@ -788,7 +784,7 @@ app = webapp2.WSGIApplication([
     ('/getnewtoken', Cron),
 
     (r'/export.(.+)', Exporter),
-    # (r'/import.(.+)', Importer),
+    (r'/import.(.+)', Importer),
 
-    # (r'/btx24/(.+)/(.+|)', BTX24)
+    (r'/btx24/(.+)/(.+|)', BTX24)
 ], debug=True)
