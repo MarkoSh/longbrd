@@ -229,8 +229,8 @@ class MainPage(webapp2.RequestHandler):
         # self.response.write(response)
 
     @staticmethod
-    def getPhotoStream(type, num=18):
-        images, next, more = Insta.query(Insta.type == type).order(Insta.date).fetch_page(64)
+    def getPhotoStream(kind, num=18):
+        images, next, more = Insta.query(Insta.type == kind).order(Insta.date).fetch_page(64)
 
         filtered = []
         for img in images:
@@ -692,19 +692,32 @@ class Leader():
 class BTX24(webapp2.RequestHandler):
     def get(self, func, params):
         Tasker.refreshToken()
+        if func == 'sync':
+            models = {
+                'leads': Lead(),
+                'products': Product()
+            }
+            list = models[params].query().fetch()
+
+
+            return
         try:
             url = "https://longbord.bitrix24.ru/rest/{}?auth={}".format(func, Tasker.token)
             req = urllib2.Request(url=url, data=params)
             fp = urllib2.urlopen(req)
             data = json.loads(fp.read())
-            pass
+            return self.respond_json(data)
         except urllib2.HTTPError as err:
             data = json.loads(err.fp.read())
-            pass
+            return self.respond_json(data)
+
+    def respond_json(self, response={'status': "ok"}):
+        self.response.headers['Content-Type'] = 'application/json'
+        self.response.write(json.dumps(response))
 
 
 class Exporter(webapp2.RequestHandler):
-    def get(self, type):
+    def get(self, kind):
         admin = users.is_current_user_admin()
         models = {
             'leads': Lead(),
@@ -714,8 +727,8 @@ class Exporter(webapp2.RequestHandler):
             # 'token': Token()
         }
         data = []
-        if type in models:
-            data = [item.to_dict() for item in models[type].query().fetch()]
+        if kind in models:
+            data = [item.to_dict() for item in models[kind].query().fetch()]
 
         str = json.dumps(data, default=Exporter.datetime_parser)
         return self.response_json(str)
@@ -734,7 +747,7 @@ class Importer(webapp2.RequestHandler):
         if 'localhost' in self.request.host:
             pass
         params = params.split('.')
-        type = params[0]
+        kind = params[0]
         mode = 'sfi'
         if len(params) > 1:
             mode = params[1]
@@ -747,22 +760,22 @@ class Importer(webapp2.RequestHandler):
                 'products': Product(),
                 'token': Token()
             }
-            if type in models:
-                url = 'http://longbrd.ru/export.{}'.format(type)
+            if kind in models:
+                url = 'http://longbrd.ru/export.{}'.format(kind)
 
                 fp = urllib2.urlopen(url)
                 data = json.loads(fp.read())
 
                 objects = []
                 for line in data:
-                    object = models[type]
+                    object = models[kind]
                     for i, val in line.items():
                         if i == 'date':
                             val = datetime.datetime.strptime(val, "%Y-%m-%dT%H:%M:%S.%f")
                         setattr(object, i, val)
                     objects.append(copy.deepcopy(object))
                 if mode == 'nsfi':
-                    ndb.delete_multi(models[type].query().fetch(keys_only=True))
+                    ndb.delete_multi(models[kind].query().fetch(keys_only=True))
                 ndb.put_multi(objects)
 
 
