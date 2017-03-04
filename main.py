@@ -775,8 +775,14 @@ class Importer(webapp2.RequestHandler):
                         setattr(object, i, val)
                     objects.append(copy.deepcopy(object))
                 if mode == 'nsfi':
-                    ndb.delete_multi(models[kind].query().fetch(keys_only=True)) #TODO: предусмотреть количество записей более 100, Mike
+                    for keys in self.batch(models[kind].query().fetch(keys_only=True), n=100):
+                        ndb.delete_multi(keys)
                 ndb.put_multi(objects)
+
+    def batch(iterable, n=1):
+        l = len(iterable)
+        for ndx in range(0, l, n):
+            yield iterable[ndx:min(ndx + n, l)]
 
 
 app = webapp2.WSGIApplication([
