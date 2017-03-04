@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 
+import copy
+import datetime
 import json
 import lxml.html as LH
 import math
 import random
 import re
+import time
 import urllib
 import urllib2
-import copy
-import datetime
-import time
 
 import jinja2
 import webapp2
@@ -21,6 +21,7 @@ from twilio.rest import TwilioRestClient
 from keys import *
 
 POSTS_PER_PAGE = 6
+
 
 class Lead(ndb.Model):
     ga = ndb.StringProperty()
@@ -357,7 +358,7 @@ class Cron(webapp2.RequestHandler):
             pass
 
 
-def addLead(data, tries = 0):
+def addLead(data, tries=0):
     Tasker.refreshToken()
 
     leader = Leader()
@@ -699,7 +700,6 @@ class BTX24(webapp2.RequestHandler):
             }
             list = models[params].query().fetch()
 
-
             return
         try:
             url = "https://longbord.bitrix24.ru/rest/{}?auth={}".format(func, Tasker.token)
@@ -775,7 +775,7 @@ class Importer(webapp2.RequestHandler):
                         setattr(object, i, val)
                     objects.append(copy.deepcopy(object))
                 if mode == 'nsfi':
-                    ndb.delete_multi(models[kind].query().fetch(keys_only=True))
+                    ndb.delete_multi(models[kind].query().fetch(keys_only=True)) #TODO: предусмотреть количество записей более 100, Mike
                 ndb.put_multi(objects)
 
 
