@@ -69,6 +69,22 @@
         }
     }, 3000);
 
+    $(".product-btn").magnificPopup({
+        callbacks: {
+            open: function () {
+                var $el = $(this.st.el);
+                $(".orderform [name=productId]").val($el.data('id'));
+                console.warn($el.data('id'));
+            }
+        },
+        showCloseBtn: false
+    });
+    $(".close-btn").click(function (e) {
+        var $this = $(this);
+        $.magnificPopup.close();
+        return false;
+    });
+
     $("form.orderform")
         .append('<input type="hidden" name="label" value="">')
         .append('<input type="hidden" name="sl" value="">')

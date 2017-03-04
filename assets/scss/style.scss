@@ -593,6 +593,34 @@ textarea {
   height: 100%;
   padding: 70px 8% 70px 55px;
 }
+#product-popup {
+  position: relative;
+  .close-btn {
+    position: absolute;
+    right: -7px;
+    top: -7px;
+    display: block;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: -1px 1px 5px grey;
+    color: darkgray;
+    transition: .2s;
+    &:hover {
+      color: gray;
+    }
+  }
+  .form-area {
+    background-color: white;
+    position: static;
+    max-width: none;
+    top: 0;
+    right: 0;
+    height: 100%;
+    padding: 0;
+  }
+}
 .contactform {
   text-align: left;
   input {

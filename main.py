@@ -22,7 +22,6 @@ from keys import *
 
 POSTS_PER_PAGE = 6
 
-
 class Lead(ndb.Model):
     ga = ndb.StringProperty()
     name = ndb.StringProperty()
@@ -64,6 +63,7 @@ class Product(ndb.Model):
     type = ndb.StringProperty()
     material = ndb.StringProperty()
     layers = ndb.IntegerProperty()
+    crmId = ndb.IntegerProperty()
     length = ndb.FloatProperty()
     width = ndb.FloatProperty()
     diameter = ndb.FloatProperty()
@@ -140,6 +140,7 @@ class MainPage(webapp2.RequestHandler):
         products = [{
                         'admin': admin,
                         'productId': product.key.id(),
+                        'crmId': product.crmId,
                         'images': product.images,
                         'title': product.title,
                         'manufacturer': product.manufacturer,
@@ -192,7 +193,7 @@ class MainPage(webapp2.RequestHandler):
         label = self.request.get('label')
         sl = int(self.request.get('sl'))
         response = {'status': "ok"}
-        if label == self.request.cookies.get('_ga') and sl > 1000:
+        if label == self.request.cookies.get('_ga') and sl > 300:
             name = self.request.get('name')
             phone = self.request.get('phone')
             email = self.request.get('email')
@@ -361,22 +362,19 @@ def addLead(data, tries = 0):
 
     leader = Leader()
     leadId = leader.add(
-        name=data['name'] if data['name'] else False,
-        phone=data['phone'] if data['phone'] else False,
+        name=data['name'] if data['name'] else '',
+        phone=data['phone'] if data['phone'] else '',
         email=data['email'],
         message=data['message'],
         contact=data['contact'],
         ip=data['ip'],
         ga=data['label']
     )
-    return {
-        'leadid': leadId
-    }
-    if not leadId:
-        if tries < 10:
-            tries += 1
-            time.sleep(5)
-            return addLead(data, tries)
+
+    if not leadId and tries < 10:
+        tries += 1
+        time.sleep(5)
+        return addLead(data, tries)
     lead = Lead(
         ga=data['label'],
         name=data['name'],
@@ -650,11 +648,11 @@ class Leader():
     tries = 0
 
     def add(self,
-            name=False,
-            phone=False,
-            email=False,
-            message="",
-            contact=False,
+            name='',
+            phone='',
+            email='',
+            message='',
+            contact='',
             ip=None,
             ga=None
             ):
@@ -713,7 +711,7 @@ class Exporter(webapp2.RequestHandler):
             'insta': Insta(),
             'posts': Post(),
             'products': Product(),
-            'token': Token()
+            # 'token': Token()
         }
         data = []
         if type in models:
@@ -732,10 +730,14 @@ class Exporter(webapp2.RequestHandler):
 
 
 class Importer(webapp2.RequestHandler):
-    def get(self, type):
+    def get(self, params):
         if 'localhost' in self.request.host:
             pass
-        return
+        params = params.split('.')
+        type = params[0]
+        mode = 'sfi'
+        if len(params) > 1:
+            mode = params[1]
         admin = users.is_current_user_admin()
         if admin:
             models = {
@@ -759,6 +761,8 @@ class Importer(webapp2.RequestHandler):
                             val = datetime.datetime.strptime(val, "%Y-%m-%dT%H:%M:%S.%f")
                         setattr(object, i, val)
                     objects.append(copy.deepcopy(object))
+                if mode == 'nsfi':
+                    ndb.delete_multi(models[type].query().fetch(keys_only=True))
                 ndb.put_multi(objects)
 
 
