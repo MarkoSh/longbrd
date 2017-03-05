@@ -141,6 +141,7 @@ class MainPage(webapp2.RequestHandler):
         products = [{
                         'admin': admin,
                         'productId': product.key.id(),
+                        'mainpage': True,
                         'images': product.images,
                         'title': product.title,
                         'manufacturer': product.manufacturer,
@@ -452,9 +453,39 @@ class Blog(webapp2.RequestHandler):
         colophon = JINJA_ENVIRONMENT.get_template('colophon.html')
         posttmpl = JINJA_ENVIRONMENT.get_template('post.html')
         scripts = JINJA_ENVIRONMENT.get_template('scripts.html')
+        producttmpl = JINJA_ENVIRONMENT.get_template('product.html')
 
+        products = Product.query().fetch(3)
+        products = [{
+                        'admin': admin,
+                        'productId': product.key.id(),
+                        'images': product.images,
+                        'title': product.title,
+                        'manufacturer': product.manufacturer,
+                        'type': product.type,
+                        'material': product.material,
+                        'layers': product.layers,
+                        'length': product.length,
+                        'width': product.width,
+                        'diameter': product.diameter,
+                        'wheels_width': product.wheels_width,
+                        'bearing': product.bearing,
+                        'hardness': product.hardness,
+                        'suspension': product.suspension,
+                        'price': product.price
+                    } for product in products]
+        random.shuffle(products)
+
+        productsoutput = ""
+        for product in products:
+            productsoutput += producttmpl.render(product)
+
+        i = 0
         postsoutput = ""
         for post in posts:
+            i += 1
+            if i == 3:
+                postsoutput += u'<div class="service-details"><div class="row text-center">{}</div></div>'.format(productsoutput)
             postsoutput += posttmpl.render(post)
 
         request = urllib2.urlopen(
@@ -478,6 +509,7 @@ class Blog(webapp2.RequestHandler):
             }),
             'posts': postsoutput,
             'recent': recent,
+            'products': productsoutput,
             'scripts': scripts.render({
                 'uIP': self.request.remote_addr,
                 'host': self.request.host_url,
@@ -813,7 +845,7 @@ class Exporter(webapp2.RequestHandler):
             'insta': Insta(),
             'posts': Post(),
             'products': Product(),
-            'token': Token()
+            # 'token': Token()
         }
         data = []
         if kind in models:
