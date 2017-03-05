@@ -73,7 +73,7 @@
         callbacks: {
             open: function () {
                 var $el = $(this.st.el);
-                $(".orderform [name=productId]").val($el.data('id'));
+                $(".orderform [name=product]").val($el.data('id'));
                 console.warn($el.data('id'));
             }
         },

@@ -10,7 +10,6 @@ import re
 import time
 import urllib
 import urllib2
-import base64
 
 import jinja2
 import webapp2
@@ -32,7 +31,7 @@ class Lead(ndb.Model):
     contact = ndb.StringProperty()
     message = ndb.StringProperty()
     ip = ndb.StringProperty()
-    product = ndb.StringProperty()
+    product = ndb.KeyProperty()
     leadId = ndb.IntegerProperty()
     date = ndb.DateTimeProperty(auto_now_add=True)
 
@@ -200,6 +199,7 @@ class MainPage(webapp2.RequestHandler):
             email = self.request.get('email')
             message = self.request.get('message')
             contact = self.request.get('discount')
+            product = int(self.request.get('product')) if self.request.get('product') else 0
 
             if phone or email or contact:
                 data = {
@@ -210,6 +210,7 @@ class MainPage(webapp2.RequestHandler):
                     'email': email,
                     'message': message,
                     'contact': contact,
+                    'product': Product.get_by_id(product) if product else 0,
                     'ip': self.request.remote_addr
                 }
 
@@ -227,7 +228,6 @@ class MainPage(webapp2.RequestHandler):
     def respond_json(self, responseData={'status': "ok"}):
         self.response.headers['Content-Type'] = 'application/json'
         self.response.write(json.dumps(responseData))
-        # self.response.write(responseData)
 
     @staticmethod
     def getPhotoStream(kind, num=18):
@@ -368,6 +368,7 @@ def addLead(data, tries=0):
         email=data['email'],
         message=data['message'],
         contact=data['contact'],
+        product=data['product'] if data['product'] else 0,
         ip=data['ip'],
         ga=data['label']
     )
@@ -383,6 +384,7 @@ def addLead(data, tries=0):
         email=data['email'],
         message=data['message'],
         contact=data['contact'],
+        product=data['product'].key if data['product'] else None,
         leadId=leadId,
         ip=data['ip']
     )
@@ -654,6 +656,7 @@ class Leader():
             email='',
             message='',
             contact='',
+            product=0,
             ip=None,
             ga=None
             ):
@@ -675,13 +678,28 @@ class Leader():
             'fields[UF_CRM_CONTACT]': contact,
             'params[REGISTER_SONET_EVENT]': "Y"
         }
+
         try:
             q = urllib.urlencode(q)
             url = "https://longbord.bitrix24.ru/rest/crm.lead.add.json?auth={}".format(Tasker.token)
             req = urllib2.Request(url=url, data=q)
             fp = urllib2.urlopen(req)
             data = json.loads(fp.read())
-            return data['result']
+            leadId = data['result']
+            if product:
+                q = {
+                    'id': leadId,
+                    'rows[0][PRODUCT_ID]': product.crmId,
+                    'rows[0][PRICE]': product.price,
+                    'rows[0][QUANTITY]': 1
+                }
+                q = urllib.urlencode(q)
+                url = "https://longbord.bitrix24.ru/rest/crm.lead.productrows.set.json?auth={}".format(Tasker.token)
+                req = urllib2.Request(url=url, data=q)
+                fp = urllib2.urlopen(req)
+                data = json.loads(fp.read())
+
+            return leadId
         except urllib2.HTTPError as err:
             if self.tries < 1:
                 self.tries += 1
@@ -725,7 +743,8 @@ class BTX24(webapp2.RequestHandler):
 
     def get(self, func, params):
         Tasker.refreshToken()
-        if func == 'sync':
+        admin = users.is_current_user_admin()
+        if func == 'sync' and admin:
             addfunc = self.handling[params]['add']
             listfunc = self.handling[params]['list']
 
@@ -746,9 +765,9 @@ class BTX24(webapp2.RequestHandler):
                     if isinstance(value, list):
                         value = value[0]
                     if i == 'images':
-                        url = 'http:{}'.format(value)
-                        fp = urllib2.urlopen(url)
-                        image = fp.read().encode('base64')
+                        # url = 'http:{}'.format(value)
+                        # fp = urllib2.urlopen(url)
+                        # image = fp.read().encode('base64')
 
                         # q.append('fields[DETAIL_PICTURE][fileData][0]={}.png'.format(item.key.id()))
                         # q.append('fields[DETAIL_PICTURE][fileData][1]={}'.format(image))
@@ -790,7 +809,7 @@ class Exporter(webapp2.RequestHandler):
     def get(self, kind):
         admin = users.is_current_user_admin()
         models = {
-            'leads': Lead(),
+            # 'leads': Lead(), # Лиды из-за кдючей невозможно экспортировать, а делать доп.привязку мне вломак
             'insta': Insta(),
             'posts': Post(),
             'products': Product(),
@@ -824,7 +843,7 @@ class Importer(webapp2.RequestHandler):
         admin = users.is_current_user_admin()
         if admin:
             models = {
-                'leads': Lead(),
+                # 'leads': Lead(),
                 'insta': Insta(),
                 'posts': Post(),
                 'products': Product(),
