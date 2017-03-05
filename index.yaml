@@ -31,12 +31,3 @@ indexes:
   - name: sts
   - name: date
     direction: desc
-
-- kind: Product
-  properties:
-  - name: crmId
-
-- kind: Product
-  properties:
-  - name: crmId
-    direction: desc

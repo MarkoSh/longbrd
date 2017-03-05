@@ -10,6 +10,7 @@ import re
 import time
 import urllib
 import urllib2
+import base64
 
 import jinja2
 import webapp2
@@ -64,7 +65,7 @@ class Product(ndb.Model):
     type = ndb.StringProperty()
     material = ndb.StringProperty()
     layers = ndb.IntegerProperty()
-    crmId = ndb.IntegerProperty()
+    crmId = ndb.IntegerProperty(default=0)
     length = ndb.FloatProperty()
     width = ndb.FloatProperty()
     diameter = ndb.FloatProperty()
@@ -109,7 +110,7 @@ class MainPage(webapp2.RequestHandler):
             try:
                 fp = urllib2.urlopen(url)
                 data = json.loads(fp.read())
-                ndb.delete_multi(Token.query().fetch(keys_only=True))
+                ndb.delete_multi(Token.query().fetch(keys_only=True)) #TODO: переделать в бач
                 token = Token(title="Bitrix24", prefix="btrx", token=data['access_token'],
                               refresh_token=data['refresh_token'])
                 token.put()
@@ -141,7 +142,6 @@ class MainPage(webapp2.RequestHandler):
         products = [{
                         'admin': admin,
                         'productId': product.key.id(),
-                        'crmId': product.crmId,
                         'images': product.images,
                         'title': product.title,
                         'manufacturer': product.manufacturer,
@@ -193,7 +193,7 @@ class MainPage(webapp2.RequestHandler):
     def post(self):
         label = self.request.get('label')
         sl = int(self.request.get('sl'))
-        response = {'status': "ok"}
+        responseData = {'status': "ok"}
         if label == self.request.cookies.get('_ga') and sl > 300:
             name = self.request.get('name')
             phone = self.request.get('phone')
@@ -215,19 +215,19 @@ class MainPage(webapp2.RequestHandler):
 
                 task = deferred.defer(addLead, data)
 
-                response['deferred'] = task.name
-                # response['lead'] = addLead(data)
+                responseData['deferred'] = task.name
+                # responseData['lead'] = addLead(data)
             else:
-                response['status'] = "nofields"
+                responseData['status'] = "nofields"
         else:
-            response['status'] = "no"
+            responseData['status'] = "no"
 
-        self.respond_json(response)
+        self.respond_json(responseData)
 
-    def respond_json(self, response={'status': "ok"}):
+    def respond_json(self, responseData={'status': "ok"}):
         self.response.headers['Content-Type'] = 'application/json'
-        self.response.write(json.dumps(response))
-        # self.response.write(response)
+        self.response.write(json.dumps(responseData))
+        # self.response.write(responseData)
 
     @staticmethod
     def getPhotoStream(kind, num=18):
@@ -353,7 +353,7 @@ class Cron(webapp2.RequestHandler):
                     post.taskId = taskId
                     post.put()
 
-        if path == '/getnewtoken':
+        if path == '/getnewtoken' and self.request.server_name != '127.0.0.1':
             Tasker.refreshToken()
             pass
 
@@ -634,7 +634,7 @@ class Tasker():
             url = "https://longbord.bitrix24.ru/oauth/token/?{}".format(q)
             fp = urllib2.urlopen(url)
             data = json.loads(fp.read())
-            ndb.delete_multi(Token.query().fetch(keys_only=True))
+            ndb.delete_multi(Token.query().fetch(keys_only=True)) #TODO: переделать в бач
             token = Token(title="Bitrix24", prefix="btrx", token=data['access_token'],
                           refresh_token=data['refresh_token'])
             token.put()
@@ -691,16 +691,86 @@ class Leader():
 
 
 class BTX24(webapp2.RequestHandler):
+    responseData = {
+        'status': 'ok',
+        'synced': []
+    }
+    models = {
+        'leads': Lead(),
+        'products': Product()
+    }
+    handling = {
+        'leads': { #TODO: Нихуя для лидов пока делать не буду, ниже будет разблюдовка полей для товаров, потом запилим для лидов.
+            'add': 'crm.lead.add',
+            'list': 'crm.lead.list'
+        },
+        'products': {
+            'add': 'crm.product.add',
+            'list': 'crm.product.list',
+            'fields': {
+                'title': "NAME",
+                'price': "PRICE",
+                'images': "PREVIEW_PICTURE"
+            },
+            'serviceFields': {
+                'ACTIVE': "Y",
+                'CURRENCY_ID': "RUB",
+                'MEASURE': 9,
+                'VAT_INCLUDED': "Y",
+                'CATALOG_ID': 24,
+                'SECTION_ID': 16
+            }
+        }
+    }
+
     def get(self, func, params):
         Tasker.refreshToken()
         if func == 'sync':
-            models = {
-                'leads': Lead(),
-                'products': Product()
-            }
-            list = models[params].query().fetch()
+            addfunc = self.handling[params]['add']
+            listfunc = self.handling[params]['list']
 
-            return
+            fields = self.handling[params]['fields']
+            serviceFields = self.handling[params]['serviceFields']
+
+            listItems = self.models[params].query().fetch()
+            self.responseData['funcs'] = {
+                'add': addfunc,
+                'list': listfunc
+            }
+            self.responseData['item'] = params
+            self.responseData['size'] = len(listItems)
+            for item in listItems:
+                q = []
+                for i in fields.keys():
+                    value = getattr(item, i)
+                    if isinstance(value, list):
+                        value = value[0]
+                    if i == 'images':
+                        url = 'http:{}'.format(value)
+                        fp = urllib2.urlopen(url)
+                        image = fp.read().encode('base64')
+
+                        # q.append('fields[DETAIL_PICTURE][fileData][0]={}.png'.format(item.key.id()))
+                        # q.append('fields[DETAIL_PICTURE][fileData][1]={}'.format(image))
+                        # q.append('fields[PREVIEW_PICTURE][fileData][0]={}.png'.format(item.key.id()))
+                        # q.append('fields[PREVIEW_PICTURE][fileData][1]={}'.format(image))
+                        continue
+
+                    q.append('fields[{}]={}'.format(fields[i], value))
+                for i in serviceFields.keys():
+                    q.append('fields[{}]={}'.format(i, serviceFields[i]))
+                q = "&".join(q)
+                url = "https://longbord.bitrix24.ru/rest/crm.product.add?auth={}".format(Tasker.token)
+                req = urllib2.Request(url=url, data=q)
+                fp = urllib2.urlopen(req)
+                data = json.loads(fp.read())
+                item.crmId = data['result']
+                item.put()
+                self.responseData['synced'].append({
+                    'key': item.key.id(),
+                    'crmId': data['result']
+                })
+            return self.respond_json(self.responseData)
         try:
             url = "https://longbord.bitrix24.ru/rest/{}?auth={}".format(func, Tasker.token)
             req = urllib2.Request(url=url, data=params)
@@ -711,9 +781,9 @@ class BTX24(webapp2.RequestHandler):
             data = json.loads(err.fp.read())
             return self.respond_json(data)
 
-    def respond_json(self, response={'status': "ok"}):
+    def respond_json(self, responseData={'status': "ok"}):
         self.response.headers['Content-Type'] = 'application/json'
-        self.response.write(json.dumps(response))
+        self.response.write(json.dumps(responseData))
 
 
 class Exporter(webapp2.RequestHandler):
@@ -724,7 +794,7 @@ class Exporter(webapp2.RequestHandler):
             'insta': Insta(),
             'posts': Post(),
             'products': Product(),
-            # 'token': Token()
+            'token': Token()
         }
         data = []
         if kind in models:
@@ -777,9 +847,11 @@ class Importer(webapp2.RequestHandler):
                 if mode == 'nsfi':
                     for keys in self.batch(models[kind].query().fetch(keys_only=True), n=100):
                         ndb.delete_multi(keys)
-                ndb.put_multi(objects)
 
-    def batch(iterable, n=1):
+                for keys in self.batch(iterable=objects, n=100):
+                    ndb.put_multi(keys)
+
+    def batch(self, iterable=[], n=1):
         l = len(iterable)
         for ndx in range(0, l, n):
             yield iterable[ndx:min(ndx + n, l)]
