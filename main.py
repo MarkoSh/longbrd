@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
+
 import copy
 import datetime
 import json
@@ -261,6 +265,9 @@ class MainPage(webapp2.RequestHandler):
 
 class Cron(webapp2.RequestHandler):
     def get(self):
+        responseData = {
+            'status': 'ok'
+        }
         path = self.request.path
         currentImages = [img.link for img in Insta.query().fetch(None)]
         currentVideos = [post.ytCode for post in Post.query().fetch(None)]
@@ -284,6 +291,7 @@ class Cron(webapp2.RequestHandler):
                     for img in jsonData['entry_data']['TagPage'][0]['tag']['media']['nodes'] if
                     'https://www.instagram.com/p/{}'.format(img['code']) not in currentImages]
                 keys = ndb.put_multi(images)
+                responseData['added_keys'] = [key.id() for key in keys]
 
         if path == '/getmine':
             q = {
@@ -299,6 +307,7 @@ class Cron(webapp2.RequestHandler):
             images = [Insta(link=img['link'], src=img['images']['thumbnail']['url'], type=1) for img in jsonData['data']
                       if img['link'] not in currentImages]
             keys = ndb.put_multi(images)
+            responseData['added_keys'] = [key.id() for key in keys]
 
         if path == '/getvideos':
             q = {
@@ -343,6 +352,8 @@ class Cron(webapp2.RequestHandler):
                     ))
 
             keys = ndb.put_multi(videos)
+            responseData['added_keys'] = [key.id() for key in keys]
+            responseData['added_tasks'] = []
 
             for key in keys:
                 post = Post.get_by_id(key.id())
@@ -353,10 +364,17 @@ class Cron(webapp2.RequestHandler):
                 if taskId:
                     post.taskId = taskId
                     post.put()
+                    responseData['added_tasks'].append(taskId)
 
         if path == '/getnewtoken' and self.request.server_name != '127.0.0.1':
             Tasker.refreshToken()
             pass
+
+        return self.response_json(responseData)
+
+    def response_json(self, str):
+        self.response.headers['Content-Type'] = 'application/json'
+        self.response.write(str)
 
 
 def addLead(data, tries=0):
@@ -443,7 +461,8 @@ class Blog(webapp2.RequestHandler):
                      'thumbnailUrl': post.thumbnailUrl,
                      'title': post.title,
                      'uploadDate': post.uploadDate,
-                     'ytCode': post.ytCode
+                     'ytCode': post.ytCode,
+                     'currentPage': self.request.path_url
                  } for post in posts]
 
         self.response.headers['Content-Type'] = 'text/html'

@@ -16,10 +16,10 @@
             <!-- /.entry-title -->
             <div class="share-post pull-right">
                 <ul class="share-list">
-                    <li><a href="#" onclick="Share.vkontakte('http://longbrd.ru/blog.html#post-{{ postId }}','{{ title }}','{{ thumbnailUrl }}',''); return false;"><i class="fa fa-vk"></i></a></li>
-                    <li><a href="#" onclick="Share.facebook('http://longbrd.ru/blog.html#post-{{ postId }}','{{ title }}','{{ thumbnailUrl }}',''); return false;"><i class="fa fa-facebook"></i></a></li>
-                    <li><a href="#" onclick="Share.odnoklassniki('http://longbrd.ru/blog.html#post-{{ postId }}','{{ title }}','{{ thumbnailUrl }}',''); return false;"><i class="fa fa-odnoklassniki"></i></a></li>
-                    <li><a href="#" onclick="Share.twitter('http://longbrd.ru/blog.html#post-{{ postId }}','{{ title }}','{{ thumbnailUrl }}',''); return false;"><i class="fa fa-twitter"></i></a></li>
+                    <li><a href="#" onclick="Share.vkontakte('{{ currentPage }}#post-{{ postId }}','{{ title }}','{{ thumbnailUrl }}',''); return false;"><i class="fa fa-vk"></i></a></li>
+                    <li><a href="#" onclick="Share.facebook('{{ currentPage }}#post-{{ postId }}','{{ title }}','{{ thumbnailUrl }}',''); return false;"><i class="fa fa-facebook"></i></a></li>
+                    <li><a href="#" onclick="Share.odnoklassniki('{{ currentPage }}#post-{{ postId }}','{{ title }}','{{ thumbnailUrl }}',''); return false;"><i class="fa fa-odnoklassniki"></i></a></li>
+                    <li><a href="#" onclick="Share.twitter('{{ currentPage }}#post-{{ postId }}','{{ title }}','{{ thumbnailUrl }}',''); return false;"><i class="fa fa-twitter"></i></a></li>
                 </ul>
             </div><!-- /.share-post -->
             <div class="post-meta clearfix">
