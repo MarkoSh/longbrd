@@ -369,10 +369,10 @@ class Cron(webapp2.RequestHandler):
                     post.put()
                     responseData['added_tasks'].append(taskId)
 
-        if path == '/cron_getnewtoken' and self.request.server_name != '127.0.0.1':
+        if path == '/cron_getnewtoken' and self.request.server_name != 'localhost':
             responseData['token_key'] = Tasker.refreshToken()
 
-        if path == '/cron_testlead' and self.request.server_name != '127.0.0.1':
+        if path == '/cron_testlead':
             _ga = "GA1.2.{}.{}".format(
                 random.randrange(1000000, 9000000),
                 random.randrange(1000000, 9000000)
@@ -392,8 +392,8 @@ class Cron(webapp2.RequestHandler):
                 'sl': random.randrange(1000, 3000)
             }
             q = urllib.urlencode(q)
-            # url = 'http://longbrd.ru/order'
-            url = 'http://localhost:8080/order'
+            url = 'http://longbrd.ru/order'
+            # url = 'http://localhost:8080/order'
             req = urllib2.Request(url=url, data=q)
             req.add_header('Cookie', '_ga={}'.format(_ga))
             try:
@@ -461,12 +461,9 @@ def addLead(data, tries=0, model=True):
     )
     if not isinstance(leaderData, int) and tries < 10:
         tries += 1
-        time.sleep(5)
         return addLead(data=data, tries=tries, model=False)
-    if tries >= 10:
-        return
     lead.crmId = leaderData
-    lead.put()
+    key = lead.put()
 
     return {
         'leadid': leaderData,
@@ -680,58 +677,55 @@ class Tasker():
                 Tasker.refreshToken()
                 return self.add(title, descr)
 
-
     def renew(self, taskId):
         q = {
-            'TASKID': taskId,
-            'auth': Tasker.getToken()
+            'TASKID': taskId
         }
         q = urllib.urlencode(q)
         try:
-            url = "https://longbord.bitrix24.ru/rest/task.item.renew.json?{}".format(q)
-            fp = urllib2.urlopen(url)
+            url = "https://longbord.bitrix24.ru/rest/task.item.renew.json?auth={}".format(Tasker.getToken())
+            req = urllib2.Request(url=url, data=q)
+            fp = urllib2.urlopen(req)
             data = json.loads(fp.read())
+            return data['result']
         except BaseException as err:
-            if self.tries < 10:
-                logging.error('{} - попытка {}'.format(TASK_FAIL, self.tries))
-                self.tries += 1
-                time.sleep(5)
+            if err.code == 401:
+                logging.error(TASK_AUTH_FAIL)
+                Tasker.refreshToken()
                 return self.renew(taskId)
 
     def update(self, taskId):
         q = {
-            'TASKID': taskId,
-            'auth': Tasker.getToken()
+            'TASKID': taskId
         }
         q = urllib.urlencode(q)
         try:
-            url = "https://longbord.bitrix24.ru/rest/task.item.complete.json?{}".format(q)
-            fp = urllib2.urlopen(url)
+            url = "https://longbord.bitrix24.ru/rest/task.item.complete.json?auth={}".format(Tasker.getToken())
+            req = urllib2.Request(url=url, data=q)
+            fp = urllib2.urlopen(req)
             data = json.loads(fp.read())
             return data['result']
         except BaseException as err:
-            if self.tries < 10:
-                logging.error('{} - попытка {}'.format(TASK_COMPLETE_FAIL, self.tries))
-                self.tries += 1
-                time.sleep(5)
+            if err.code == 401:
+                logging.error(TASK_AUTH_FAIL)
+                Tasker.refreshToken()
                 return self.update(taskId)
 
     def delete(self, taskId):
         q = {
-            'TASKID': taskId,
-            'auth': Tasker.getToken()
+            'TASKID': taskId
         }
         q = urllib.urlencode(q)
         try:
-            url = "https://longbord.bitrix24.ru/rest/task.item.delete.json?{}".format(q)
-            fp = urllib2.urlopen(url)
+            url = "https://longbord.bitrix24.ru/rest/task.item.delete.json?auth={}".format(Tasker.getToken())
+            req = urllib2.Request(url=url, data=q)
+            fp = urllib2.urlopen(req)
             data = json.loads(fp.read())
             return data['result']
         except BaseException as err:
-            if self.tries < 10:
-                logging.error('Попытка удалить задачу неуспешна - попытка {}'.format(self.tries))
-                self.tries += 1
-                time.sleep(5)
+            if err.code == 401:
+                logging.error(TASK_AUTH_FAIL)
+                Tasker.refreshToken()
                 return self.delete(taskId)
 
     @staticmethod
@@ -744,16 +738,16 @@ class Tasker():
 
     @staticmethod
     def refreshToken():
+        q = {
+            'client_id': BTRX24_CODE,
+            'grant_type': "refresh_token",
+            'client_secret': BTRX24_KEY,
+            'redirect_uri': "http://longbrd.ru",
+            'refresh_token': Tasker.getRefreshToken()
+        }
+        q = urllib.urlencode(q)
+        url = "https://longbord.bitrix24.ru/oauth/token/?{}".format(q)
         try:
-            q = {
-                'client_id': BTRX24_CODE,
-                'grant_type': "refresh_token",
-                'client_secret': BTRX24_KEY,
-                'redirect_uri': "http://longbrd.ru",
-                'refresh_token': Tasker.getRefreshToken()
-            }
-            q = urllib.urlencode(q)
-            url = "https://longbord.bitrix24.ru/oauth/token/?{}".format(q)
             fp = urllib2.urlopen(url)
             data = json.loads(fp.read())
             ndb.delete_multi(Token.query().fetch(keys_only=True)) #TODO: переделать в бач
@@ -763,10 +757,8 @@ class Tasker():
             logging.info(TOKEN_UPDATED)
             return key
         except BaseException as err:
-            if Tasker.tries < 10:
-                logging.error('{} - попытка {}'.format(TOKEN_UPDATE_FAIL, Tasker.tries))
-                Tasker.tries += 1
-                time.sleep(5)
+            if err.code == 401:
+                logging.error(TOKEN_UPDATE_FAIL)
                 return Tasker.refreshToken()
 
 
@@ -822,13 +814,19 @@ class Leader():
                 fp = urllib2.urlopen(req)
                 data = json.loads(fp.read())
             return lead
-        except urllib2.HTTPError as err:
-            if self.tries < 1:
+        except BaseException as err:
+            if err.code == 401:
+                logging.error(LEAD_AUTH_FAIL)
                 Tasker.refreshToken()
-                logging.error('{} - попытка {}'.format(LEAD_FAIL, self.tries))
-                self.tries += 1
-                time.sleep(5)
-                return self.add(name, phone, email, message, contact, ip, ga)
+                return self.add(
+                    name=name,
+                    phone=phone,
+                    email=email,
+                    message=message,
+                    contact=contact,
+                    product=product,
+                    ip=ip,
+                    ga=ga)
             return json.loads(err.read())
 
 
@@ -914,12 +912,12 @@ class BTX24(webapp2.RequestHandler):
                 })
             return self.respond_json(self.responseData)
         try:
-            url = "https://longbord.bitrix24.ru/rest/{}?auth={}".format(func, Tasker.token)
+            url = "https://longbord.bitrix24.ru/rest/{}?auth={}".format(func, Tasker.getToken())
             req = urllib2.Request(url=url, data=params)
             fp = urllib2.urlopen(req)
             data = json.loads(fp.read())
             return self.respond_json(data)
-        except urllib2.HTTPError as err:
+        except BaseException as err:
             data = json.loads(err.fp.read())
             return self.respond_json(data)
 
