@@ -14,6 +14,7 @@ import re
 import time
 import urllib
 import urllib2
+import logging
 
 import jinja2
 import webapp2
@@ -22,7 +23,11 @@ from google.appengine.ext import deferred
 from google.appengine.ext import ndb
 from twilio.rest import TwilioRestClient
 
+from google.appengine.api import urlfetch
+urlfetch.set_default_fetch_deadline(45)
+
 from keys import *
+from messages import *
 
 POSTS_PER_PAGE = 6
 
@@ -36,7 +41,7 @@ class Lead(ndb.Model):
     message = ndb.StringProperty()
     ip = ndb.StringProperty()
     product = ndb.KeyProperty()
-    leadId = ndb.IntegerProperty()
+    crmId = ndb.IntegerProperty(default=0)
     date = ndb.DateTimeProperty(auto_now_add=True)
 
 
@@ -95,7 +100,6 @@ JINJA_ENVIRONMENT = jinja2.Environment(
 
 class MainPage(webapp2.RequestHandler):
     def get(self):
-
         self.response.headers['Content-Type'] = 'text/html'
 
         if self.request.get('code'):
@@ -222,7 +226,6 @@ class MainPage(webapp2.RequestHandler):
                 task = deferred.defer(addLead, data)
 
                 responseData['deferred'] = task.name
-                # responseData['lead'] = addLead(data)
             else:
                 responseData['status'] = "nofields"
         else:
@@ -230,7 +233,7 @@ class MainPage(webapp2.RequestHandler):
 
         self.respond_json(responseData)
 
-    def respond_json(self, responseData={'status': "ok"}):
+    def respond_json(self, responseData=''):
         self.response.headers['Content-Type'] = 'application/json'
         self.response.write(json.dumps(responseData))
 
@@ -272,7 +275,7 @@ class Cron(webapp2.RequestHandler):
         currentImages = [img.link for img in Insta.query().fetch(None)]
         currentVideos = [post.ytCode for post in Post.query().fetch(None)]
 
-        if path == '/getstream':
+        if path == '/cron_getstream':
             tags = [
                 'longboard',
                 'longboarding',
@@ -293,7 +296,7 @@ class Cron(webapp2.RequestHandler):
                 keys = ndb.put_multi(images)
                 responseData['added_keys'] = [key.id() for key in keys]
 
-        if path == '/getmine':
+        if path == '/cron_getmine':
             q = {
                 'count': 12,
                 'access_token': '{}'.format(INSTAGRAM_ACCESS_TOKEN)
@@ -309,10 +312,10 @@ class Cron(webapp2.RequestHandler):
             keys = ndb.put_multi(images)
             responseData['added_keys'] = [key.id() for key in keys]
 
-        if path == '/getvideos':
+        if path == '/cron_getvideos':
             q = {
                 'part': 'snippet',
-                'maxResults': '15',
+                'maxResults': '1',
                 'type': 'video',
                 'q': 'Лонгбординг',
                 'relevanceLanguage': 'ru',
@@ -366,9 +369,62 @@ class Cron(webapp2.RequestHandler):
                     post.put()
                     responseData['added_tasks'].append(taskId)
 
-        if path == '/getnewtoken' and self.request.server_name != '127.0.0.1':
-            Tasker.refreshToken()
-            pass
+        if path == '/cron_getnewtoken' and self.request.server_name != '127.0.0.1':
+            responseData['token_key'] = Tasker.refreshToken()
+
+        if path == '/cron_testlead' and self.request.server_name != '127.0.0.1':
+            _ga = "GA1.2.{}.{}".format(
+                random.randrange(1000000, 9000000),
+                random.randrange(1000000, 9000000)
+            )
+            name = "Тест {}".format(random.randrange(1000000, 9000000))
+            q = {
+                'name': name,
+                'email': "{}@markschk.ru".format(random.randrange(1000000, 9000000)),
+                'phone': "+7 ({}) {}-{}-{}".format(
+                    random.randrange(800, 900),
+                    random.randrange(100, 900),
+                    random.randrange(10, 90),
+                    random.randrange(10, 90),
+                ),
+                'message': "Сообщение {}".format(random.randrange(1000000, 9000000)),
+                'label': _ga,
+                'sl': random.randrange(1000, 3000)
+            }
+            q = urllib.urlencode(q)
+            # url = 'http://longbrd.ru/order'
+            url = 'http://localhost:8080/order'
+            req = urllib2.Request(url=url, data=q)
+            req.add_header('Cookie', '_ga={}'.format(_ga))
+            try:
+                fp = urllib2.urlopen(req)
+                data = fp.read()
+                responseData['test_create'] = data
+                time.sleep(5)
+                q = {
+                    'filter[NAME]': name
+                }
+                q = urllib.urlencode(q)
+                url = "https://longbord.bitrix24.ru/rest/crm.lead.list.json?auth={}".format(Tasker.getToken())
+                req = urllib2.Request(url=url, data=q)
+                try:
+                    fp = urllib2.urlopen(req)
+                    data = json.loads(fp.read())
+                    if data['total']:
+                        responseData['test_get'] = data
+                        logging.info(LEAD_TEST_CREATED)
+                    else:
+                        responseData['test_get'] = 'FAIL'
+                        logging.error(LEAD_TEST_CRM_NOT_FOUND)
+                except BaseException as err:
+                    if err.code == 401:
+                        responseData['test_get'] = '{}'.format()
+                        logging.error(LEAD_TEST_AUTH_FAIL)
+            except BaseException as err:
+                responseData['status'] = 'no'
+                responseData['error'] = err
+                logging.error(LEAD_FAIL)
+
 
         return self.response_json(responseData)
 
@@ -377,11 +433,23 @@ class Cron(webapp2.RequestHandler):
         self.response.write(str)
 
 
-def addLead(data, tries=0):
-    Tasker.refreshToken()
+def addLead(data, tries=0, model=True):
+    if model:
+        lead = Lead(
+            ga=data['label'],
+            name=data['name'],
+            phone=data['phone'],
+            email=data['email'],
+            message=data['message'],
+            contact=data['contact'],
+            product=data['product'].key if data['product'] else None,
+            crmId=0,
+            ip=data['ip']
+        )
+        key = lead.put()
 
     leader = Leader()
-    leadId = leader.add(
+    leaderData = leader.add(
         name=data['name'] if data['name'] else '',
         phone=data['phone'] if data['phone'] else '',
         email=data['email'],
@@ -391,25 +459,17 @@ def addLead(data, tries=0):
         ip=data['ip'],
         ga=data['label']
     )
-
-    if not leadId and tries < 10:
+    if not isinstance(leaderData, int) and tries < 10:
         tries += 1
         time.sleep(5)
-        return addLead(data, tries)
-    lead = Lead(
-        ga=data['label'],
-        name=data['name'],
-        phone=data['phone'],
-        email=data['email'],
-        message=data['message'],
-        contact=data['contact'],
-        product=data['product'].key if data['product'] else None,
-        leadId=leadId,
-        ip=data['ip']
-    )
-    key = lead.put()
+        return addLead(data=data, tries=tries, model=False)
+    if tries >= 10:
+        return
+    lead.crmId = leaderData
+    lead.put()
+
     return {
-        'leadid': leadId,
+        'leadid': leaderData,
         'key': key.id()
     }
 
@@ -598,9 +658,6 @@ class Login(webapp2.RequestHandler):
 
 
 class Tasker():
-    token = Token.query().get().token
-    refresh_token = Token.query().get().refresh_token
-
     tries = 0
 
     def add(self, title, descr):
@@ -608,25 +665,26 @@ class Tasker():
             'TASKDATA[TITLE]': title,
             'TASKDATA[DESCRIPTION]': descr,
             'TASKDATA[RESPONSIBLE_ID]': 1,
-            'TASKDATA[GROUP_ID]': 10,
-            'auth': Tasker.token
+            'TASKDATA[GROUP_ID]': 10
         }
         q = urllib.urlencode(q)
         try:
-            url = "https://longbord.bitrix24.ru/rest/task.item.add.json?{}".format(q)
-            fp = urllib2.urlopen(url)
+            url = "https://longbord.bitrix24.ru/rest/task.item.add.json?auth={}".format(Tasker.getToken())
+            req = urllib2.Request(url=url, data=q)
+            fp = urllib2.urlopen(req)
             data = json.loads(fp.read())
             return data['result']
         except BaseException as err:
-            if self.tries < 10:
-                self.tries += 1
-                time.sleep(5)
+            if err.code == 401:
+                logging.error(TASK_AUTH_FAIL)
+                Tasker.refreshToken()
                 return self.add(title, descr)
+
 
     def renew(self, taskId):
         q = {
             'TASKID': taskId,
-            'auth': Tasker.token
+            'auth': Tasker.getToken()
         }
         q = urllib.urlencode(q)
         try:
@@ -635,6 +693,7 @@ class Tasker():
             data = json.loads(fp.read())
         except BaseException as err:
             if self.tries < 10:
+                logging.error('{} - попытка {}'.format(TASK_FAIL, self.tries))
                 self.tries += 1
                 time.sleep(5)
                 return self.renew(taskId)
@@ -642,7 +701,7 @@ class Tasker():
     def update(self, taskId):
         q = {
             'TASKID': taskId,
-            'auth': Tasker.token
+            'auth': Tasker.getToken()
         }
         q = urllib.urlencode(q)
         try:
@@ -652,6 +711,7 @@ class Tasker():
             return data['result']
         except BaseException as err:
             if self.tries < 10:
+                logging.error('{} - попытка {}'.format(TASK_COMPLETE_FAIL, self.tries))
                 self.tries += 1
                 time.sleep(5)
                 return self.update(taskId)
@@ -659,7 +719,7 @@ class Tasker():
     def delete(self, taskId):
         q = {
             'TASKID': taskId,
-            'auth': Tasker.token
+            'auth': Tasker.getToken()
         }
         q = urllib.urlencode(q)
         try:
@@ -669,9 +729,18 @@ class Tasker():
             return data['result']
         except BaseException as err:
             if self.tries < 10:
+                logging.error('Попытка удалить задачу неуспешна - попытка {}'.format(self.tries))
                 self.tries += 1
                 time.sleep(5)
                 return self.delete(taskId)
+
+    @staticmethod
+    def getToken():
+        return Token.query().get().token
+
+    @staticmethod
+    def getRefreshToken():
+        return Token.query().get().refresh_token
 
     @staticmethod
     def refreshToken():
@@ -681,7 +750,7 @@ class Tasker():
                 'grant_type': "refresh_token",
                 'client_secret': BTRX24_KEY,
                 'redirect_uri': "http://longbrd.ru",
-                'refresh_token': Tasker.refresh_token
+                'refresh_token': Tasker.getRefreshToken()
             }
             q = urllib.urlencode(q)
             url = "https://longbord.bitrix24.ru/oauth/token/?{}".format(q)
@@ -690,9 +759,12 @@ class Tasker():
             ndb.delete_multi(Token.query().fetch(keys_only=True)) #TODO: переделать в бач
             token = Token(title="Bitrix24", prefix="btrx", token=data['access_token'],
                           refresh_token=data['refresh_token'])
-            token.put()
+            key = token.put()
+            logging.info(TOKEN_UPDATED)
+            return key
         except BaseException as err:
             if Tasker.tries < 10:
+                logging.error('{} - попытка {}'.format(TOKEN_UPDATE_FAIL, Tasker.tries))
                 Tasker.tries += 1
                 time.sleep(5)
                 return Tasker.refreshToken()
@@ -732,14 +804,14 @@ class Leader():
 
         try:
             q = urllib.urlencode(q)
-            url = "https://longbord.bitrix24.ru/rest/crm.lead.add.json?auth={}".format(Tasker.token)
+            url = "https://longbord.bitrix24.ru/rest/crm.lead.add.json?auth={}".format(Tasker.getToken())
             req = urllib2.Request(url=url, data=q)
             fp = urllib2.urlopen(req)
             data = json.loads(fp.read())
-            leadId = data['result']
+            lead = data['result']
             if product:
                 q = {
-                    'id': leadId,
+                    'id': lead,
                     'rows[0][PRODUCT_ID]': product.crmId,
                     'rows[0][PRICE]': product.price,
                     'rows[0][QUANTITY]': 1
@@ -749,10 +821,11 @@ class Leader():
                 req = urllib2.Request(url=url, data=q)
                 fp = urllib2.urlopen(req)
                 data = json.loads(fp.read())
-
-            return leadId
+            return lead
         except urllib2.HTTPError as err:
             if self.tries < 1:
+                Tasker.refreshToken()
+                logging.error('{} - попытка {}'.format(LEAD_FAIL, self.tries))
                 self.tries += 1
                 time.sleep(5)
                 return self.add(name, phone, email, message, contact, ip, ga)
@@ -793,7 +866,6 @@ class BTX24(webapp2.RequestHandler):
     }
 
     def get(self, func, params):
-        Tasker.refreshToken()
         admin = users.is_current_user_admin()
         if func == 'sync' and admin:
             addfunc = self.handling[params]['add']
@@ -864,7 +936,7 @@ class Exporter(webapp2.RequestHandler):
             'insta': Insta(),
             'posts': Post(),
             'products': Product(),
-            # 'token': Token()
+            'token': Token()
         }
         data = []
         if kind in models:
@@ -943,10 +1015,7 @@ app = webapp2.WSGIApplication([
     ('/loginmepls', Login),
     ('/logoutmepls', Login),
 
-    ('/getstream', Cron),
-    ('/getmine', Cron),
-    ('/getvideos', Cron),
-    ('/getnewtoken', Cron),
+    ('/cron_\w+', Cron),
 
     (r'/export.(.+)', Exporter),
     (r'/import.(.+)', Importer),

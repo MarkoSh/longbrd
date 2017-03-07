@@ -1,16 +1,20 @@
 cron:
 - description: Обновление фотострима
-  url: /getstream
+  url: /cron_getstream
   schedule: every 72 hours
 
 - description: Обновление ленты в сайдбаре
-  url: /getmine
+  url: /cron_getmine
   schedule: every 72 hours
 
 - description: Обновление видео
-  url: /getvideos
+  url: /cron_getvideos
   schedule: every 72 hours
 
-- description: Обновление токена bitrix24
-  url: /getnewtoken
-  schedule: every 30 minutes
+#- description: Обновление токена bitrix24
+#  url: /cron_getnewtoken
+#  schedule: every 30 minutes
+
+- description: Тестовый лид
+  url: /cron_testlead
+  schedule: every 1 hours
