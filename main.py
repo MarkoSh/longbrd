@@ -100,7 +100,6 @@ JINJA_ENVIRONMENT = jinja2.Environment(
 
 class MainPage(webapp2.RequestHandler):
     def get(self):
-        self.response.headers['Content-Type'] = 'text/html'
 
         if self.request.get('code'):
             code = self.request.get('code')
@@ -132,7 +131,19 @@ class MainPage(webapp2.RequestHandler):
         producttmpl = JINJA_ENVIRONMENT.get_template('product.html')
         posttmpl = JINJA_ENVIRONMENT.get_template('post_short.html')
 
-        photo_stream = self.getPhotoStream(0, 16)
+        overquotatmpl = JINJA_ENVIRONMENT.get_template('overquota.html')
+
+        try:
+            photo_stream = self.getPhotoStream(0, 16)
+        except BaseException, message:
+            logging.critical('Достигнута квота - {}'.format(message))
+            return self.respond_html(overquotatmpl.render({
+                'title': SERVER_OVER_QUOTA,
+                'scripts': scripts.render({
+                    'uIP': self.request.remote_addr,
+                    'host': self.request.host_url
+                })
+            }))
 
         admin = users.is_current_user_admin()
         if admin:
@@ -182,7 +193,7 @@ class MainPage(webapp2.RequestHandler):
         for post in posts:
             postsoutput += posttmpl.render(post)
 
-        self.response.write(template.render({
+        self.respond_html(template.render({
             'masthead': masthead.render(),
             'colophon': colophon.render({
                 'postscount': postscount,
@@ -236,6 +247,10 @@ class MainPage(webapp2.RequestHandler):
     def respond_json(self, responseData=''):
         self.response.headers['Content-Type'] = 'application/json'
         self.response.write(json.dumps(responseData))
+
+    def respond_html(self, responseData=''):
+        self.response.headers['Content-Type'] = 'text/html'
+        self.response.write(responseData)
 
     @staticmethod
     def getPhotoStream(kind, num=18):
@@ -417,7 +432,7 @@ class Cron(webapp2.RequestHandler):
                         responseData['test_get'] = 'FAIL'
                         logging.error(LEAD_TEST_CRM_NOT_FOUND)
                 except BaseException as err:
-                    if err.code == 401:
+                    if 'code' in err and err.code == 401:
                         responseData['test_get'] = '{}'.format()
                         logging.error(LEAD_TEST_AUTH_FAIL)
             except BaseException as err:
@@ -433,8 +448,8 @@ class Cron(webapp2.RequestHandler):
         self.response.write(str)
 
 
-def addLead(data, tries=0, model=True):
-    if model:
+def addLead(data, tries=0, lead=False):
+    if not lead:
         lead = Lead(
             ga=data['label'],
             name=data['name'],
@@ -446,7 +461,6 @@ def addLead(data, tries=0, model=True):
             crmId=0,
             ip=data['ip']
         )
-        key = lead.put()
 
     leader = Leader()
     leaderData = leader.add(
@@ -461,7 +475,7 @@ def addLead(data, tries=0, model=True):
     )
     if not isinstance(leaderData, int) and tries < 10:
         tries += 1
-        return addLead(data=data, tries=tries, model=False)
+        return addLead(data=data, tries=tries, lead=lead)
     lead.crmId = leaderData
     key = lead.put()
 
@@ -478,8 +492,27 @@ def sendSMS(key, leadId):
 
 class Blog(webapp2.RequestHandler):
     def get(self):
+        template = JINJA_ENVIRONMENT.get_template('blog.html')
+        masthead = JINJA_ENVIRONMENT.get_template('masthead.html')
+        colophon = JINJA_ENVIRONMENT.get_template('colophon.html')
+        posttmpl = JINJA_ENVIRONMENT.get_template('post.html')
+        scripts = JINJA_ENVIRONMENT.get_template('scripts.html')
+        producttmpl = JINJA_ENVIRONMENT.get_template('product.html')
+
+        overquotatmpl = JINJA_ENVIRONMENT.get_template('overquota.html')
+
+        try:
+            photo_stream = self.getPhotoStream(0, 16)
+        except BaseException, message:
+            logging.critical('Достигнута квота - {}'.format(message))
+            return self.respond_html(overquotatmpl.render({
+                'title': SERVER_OVER_QUOTA,
+                'scripts': scripts.render({
+                    'uIP': self.request.remote_addr,
+                    'host': self.request.host_url
+                })
+            }))
         recent = MainPage.getPhotoStream(1)
-        photo_stream = MainPage.getPhotoStream(0, 16)
 
         offset = 0
 
@@ -522,15 +555,6 @@ class Blog(webapp2.RequestHandler):
                      'currentPage': self.request.path_url
                  } for post in posts]
 
-        self.response.headers['Content-Type'] = 'text/html'
-
-        template = JINJA_ENVIRONMENT.get_template('blog.html')
-        masthead = JINJA_ENVIRONMENT.get_template('masthead.html')
-        colophon = JINJA_ENVIRONMENT.get_template('colophon.html')
-        posttmpl = JINJA_ENVIRONMENT.get_template('post.html')
-        scripts = JINJA_ENVIRONMENT.get_template('scripts.html')
-        producttmpl = JINJA_ENVIRONMENT.get_template('product.html')
-
         products = Product.query().fetch(3)
         products = [{
                         'admin': admin,
@@ -571,7 +595,7 @@ class Blog(webapp2.RequestHandler):
 
         next = next.urlsafe() if next != None else None
 
-        self.response.write(template.render({
+        self.respond_html(template.render({
             'next': next,
             'admin': admin,
             'pages': pages,
@@ -592,6 +616,10 @@ class Blog(webapp2.RequestHandler):
                 'admin': admin
             })
         }))
+
+    def respond_html(self, responseData=''):
+        self.response.headers['Content-Type'] = 'text/html'
+        self.response.write(responseData)
 
 
 class EditPost(webapp2.RequestHandler):
@@ -672,7 +700,7 @@ class Tasker():
             data = json.loads(fp.read())
             return data['result']
         except BaseException as err:
-            if err.code == 401:
+            if 'code' in err and err.code == 401:
                 logging.error(TASK_AUTH_FAIL)
                 Tasker.refreshToken()
                 return self.add(title, descr)
@@ -689,7 +717,7 @@ class Tasker():
             data = json.loads(fp.read())
             return data['result']
         except BaseException as err:
-            if err.code == 401:
+            if 'code' in err and err.code == 401:
                 logging.error(TASK_AUTH_FAIL)
                 Tasker.refreshToken()
                 return self.renew(taskId)
@@ -706,7 +734,7 @@ class Tasker():
             data = json.loads(fp.read())
             return data['result']
         except BaseException as err:
-            if err.code == 401:
+            if 'code' in err and err.code == 401:
                 logging.error(TASK_AUTH_FAIL)
                 Tasker.refreshToken()
                 return self.update(taskId)
@@ -723,7 +751,7 @@ class Tasker():
             data = json.loads(fp.read())
             return data['result']
         except BaseException as err:
-            if err.code == 401:
+            if 'code' in err and err.code == 401:
                 logging.error(TASK_AUTH_FAIL)
                 Tasker.refreshToken()
                 return self.delete(taskId)
@@ -757,7 +785,7 @@ class Tasker():
             logging.info(TOKEN_UPDATED)
             return key
         except BaseException as err:
-            if err.code == 401:
+            if 'code' in err and err.code == 401:
                 logging.error(TOKEN_UPDATE_FAIL)
                 return Tasker.refreshToken()
 
@@ -815,7 +843,7 @@ class Leader():
                 data = json.loads(fp.read())
             return lead
         except BaseException as err:
-            if err.code == 401:
+            if 'code' in err and err.code == 401:
                 logging.error(LEAD_AUTH_FAIL)
                 Tasker.refreshToken()
                 return self.add(
@@ -827,7 +855,6 @@ class Leader():
                     product=product,
                     ip=ip,
                     ga=ga)
-            return json.loads(err.read())
 
 
 class BTX24(webapp2.RequestHandler):
