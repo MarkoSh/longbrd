@@ -1506,9 +1506,10 @@ textarea.editor {
   }
 }
 
-label[for=agree] {
+label[for^=agree] {
+  max-width: 360px;
   cursor: pointer;
-  margin: 10px 0 10px 45px;
+  margin: 10px auto;
   display: block;
   position: relative;
   [type=checkbox] {

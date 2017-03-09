@@ -41,6 +41,7 @@ class Lead(ndb.Model):
     message = ndb.StringProperty()
     ip = ndb.StringProperty()
     product = ndb.KeyProperty()
+    promo = ndb.KeyProperty()
     crmId = ndb.IntegerProperty(default=0)
     date = ndb.DateTimeProperty(auto_now_add=True)
 
@@ -82,6 +83,12 @@ class Product(ndb.Model):
     hardness = ndb.StringProperty()
     suspension = ndb.FloatProperty()
     price = ndb.FloatProperty()
+
+
+class Promo(ndb.Model):
+    code = ndb.StringProperty()
+    discount = ndb.IntegerProperty(default=0)
+    crmId = ndb.IntegerProperty(default=0)
 
 
 class Token(ndb.Model):
@@ -212,16 +219,20 @@ class MainPage(webapp2.RequestHandler):
     def post(self):
         label = self.request.get('label')
         sl = int(self.request.get('sl'))
+        agree = self.request.get('agree')
         responseData = {'status': "ok"}
-        if label == self.request.cookies.get('_ga') and sl > 300:
+        if label == self.request.cookies.get('_ga') and sl > 300 and agree:
             name = self.request.get('name')
             phone = self.request.get('phone')
             email = self.request.get('email')
             message = self.request.get('message')
             contact = self.request.get('discount')
+            promo = self.request.get('promo')
             product = int(self.request.get('product')) if self.request.get('product') else 0
 
             if phone or email or contact:
+                promoKey = Promo.query(Promo.code==promo).get() if promo else 0
+                productKey = Product.get_by_id(product) if product else 0
                 data = {
                     'label': label,
                     'sl': sl,
@@ -230,8 +241,9 @@ class MainPage(webapp2.RequestHandler):
                     'email': email,
                     'message': message,
                     'contact': contact,
-                    'product': Product.get_by_id(product) if product else 0,
-                    'ip': self.request.remote_addr
+                    'product': productKey,
+                    'ip': self.request.remote_addr,
+                    'promo': promoKey
                 }
 
                 task = deferred.defer(addLead, data)
@@ -239,6 +251,8 @@ class MainPage(webapp2.RequestHandler):
                 responseData['deferred'] = task.name
             else:
                 responseData['status'] = "nofields"
+        elif not agree:
+            responseData['status'] = "notagree"
         else:
             responseData['status'] = "no"
 
@@ -456,6 +470,7 @@ def addLead(data, lead=False):
             email=data['email'],
             message=data['message'],
             contact=data['contact'],
+            promo=data['promo'].key if data['promo'] else None,
             product=data['product'].key if data['product'] else None,
             crmId=0,
             ip=data['ip']
@@ -468,6 +483,7 @@ def addLead(data, lead=False):
         email=data['email'],
         message=data['message'],
         contact=data['contact'],
+        promo=data['promo'] if data['promo'] else 0,
         product=data['product'] if data['product'] else 0,
         ip=data['ip'],
         ga=data['label']
@@ -797,6 +813,7 @@ class Leader():
             email='',
             message='',
             contact='',
+            promo=0,
             product=0,
             ip=None,
             ga=None
@@ -834,6 +851,10 @@ class Leader():
                     'rows[0][PRICE]': product.price,
                     'rows[0][QUANTITY]': 1
                 }
+                if promo:
+                    q['rows[1][PRODUCT_ID]'] = promo.crmId
+                    q['rows[1][PRICE]'] = -promo.discount
+                    q['rows[1][QUANTITY]'] = 1
                 q = urllib.urlencode(q)
                 url = "https://longbord.bitrix24.ru/rest/crm.lead.productrows.set.json?auth={}".format(Tasker.getToken())
                 req = urllib2.Request(url=url, data=q)

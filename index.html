@@ -330,6 +330,11 @@
                             <input class="subscribe-email" type="text" id="subscribe-email"
                                    placeholder="E-Mail или телефон" name="discount">
                             <button type="submit" id="subscribe-submit" class="btn">Скидка!</button>
+                            <label for="agree__">
+                                <input id="agree__" class="form-control pull-right" name="agree" type="checkbox" checked="checked">
+                                <span class="switcher"></span>
+                                Я согласен на обработку передаваемых данных
+                            </label>
                             <span id="subscribe-loading" class="btn"> <i class="fa fa-refresh fa-spin"></i> </span>
                             <div class="subscribe-error"></div>
                         </div><!-- /.subscribe-hide -->
@@ -506,15 +511,20 @@
         </div><!-- /#google-map -->
 
         <div class="form-area text-center wow animated fadeInRight" data-wow-delay=".75s">
-            <h2 class="section-title">Заказать <span><strong>Лонгборд</strong></span></h2><!-- /.section-title -->
+            <h2 class="section-title">Напишите <span><strong>нам</strong></span></h2><!-- /.section-title -->
             <form method="post" id="contactform" class="contactform orderform">
                 <input id="name" class="form-control" name="name" type="text" placeholder="Имя" value="">
                 <input id="email" class="form-control pull-right" name="email" type="text" placeholder="Email" value="">
                 <input id="phone" class="form-control pull-right" name="phone" type="text" placeholder="Телефон" value="">
                 <textarea id="message" class="form-control" name="message" placeholder="Комментарий"
                           rows="5"></textarea>
-                <button name="submit" class="btn submit-btn" type="submit" id="submit">Купить <strong>Лонгборд</strong>
+                <button name="submit" class="btn submit-btn" type="submit" id="submit">Отправить <strong>сообщение</strong>
                 </button>
+                <label for="agree_">
+                    <input id="agree_" class="form-control pull-right" name="agree" type="checkbox" checked="checked">
+                    <span class="switcher"></span>
+                    Я согласен на обработку передаваемых данных
+                </label>
             </form><!-- /#contactform -->
         </div><!-- /.form-area -->
     </div><!-- /.contact-inner -->

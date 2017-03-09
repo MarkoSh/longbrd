@@ -115,7 +115,6 @@
             $this.find("[type = submit]").prop('disabled', true);
 
             $.post('/order', data, function (res) {
-                console.warn('success');
                 var options = {
                     showCloseBtn: false,
                     items: {
@@ -126,6 +125,9 @@
                 switch (res.status) {
                     case 'nofields':
                         options['items']['src'] = "#nofields-popup";
+                        break;
+                    case 'notagree':
+                        options['items']['src'] = "#notagree-popup";
                         break;
                     case 'no':
                         options['items']['src'] = "#fail-popup";
