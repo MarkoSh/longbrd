@@ -21,6 +21,10 @@
     ga('create', 'UA-62655744-3', 'auto');
     ga('set', 'dimension5', uIP);
 
+    if (typeof overload != 'undefined') {
+        ga("send", "event", "Ошибки", "Достигнута квота", host, 0);
+    }
+
     $(".itemFilter a, .load-more").click(function (e) {
         var $this = $(this);
         ga("send", "event", "Клики", "Кнопка " + $this.text(), host, 0);
@@ -74,7 +78,6 @@
             open: function () {
                 var $el = $(this.st.el);
                 $(".orderform [name=product]").val($el.data('id'));
-                console.warn($el.data('id'));
             }
         },
         showCloseBtn: false

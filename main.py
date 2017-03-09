@@ -136,7 +136,7 @@ class MainPage(webapp2.RequestHandler):
         try:
             photo_stream = self.getPhotoStream(0, 16)
         except BaseException, message:
-            logging.critical('Достигнута квота - {}'.format(message))
+            logging.critical('Ошибка 139 строка - {}'.format(message))
             return self.respond_html(overquotatmpl.render({
                 'title': SERVER_OVER_QUOTA,
                 'scripts': scripts.render({
@@ -440,7 +440,6 @@ class Cron(webapp2.RequestHandler):
                 responseData['error'] = err
                 logging.error(LEAD_FAIL)
 
-
         return self.response_json(responseData)
 
     def response_json(self, str):
@@ -448,7 +447,7 @@ class Cron(webapp2.RequestHandler):
         self.response.write(str)
 
 
-def addLead(data, tries=0, lead=False):
+def addLead(data, lead=False):
     if not lead:
         lead = Lead(
             ga=data['label'],
@@ -473,9 +472,8 @@ def addLead(data, tries=0, lead=False):
         ip=data['ip'],
         ga=data['label']
     )
-    if not isinstance(leaderData, int) and tries < 10:
-        tries += 1
-        return addLead(data=data, tries=tries, lead=lead)
+    if not isinstance(leaderData, int) :
+        return addLead(data=data, lead=lead)
     lead.crmId = leaderData
     key = lead.put()
 
@@ -502,9 +500,9 @@ class Blog(webapp2.RequestHandler):
         overquotatmpl = JINJA_ENVIRONMENT.get_template('overquota.html')
 
         try:
-            photo_stream = self.getPhotoStream(0, 16)
+            photo_stream = MainPage.getPhotoStream(0, 16)
         except BaseException, message:
-            logging.critical('Достигнута квота - {}'.format(message))
+            logging.critical('Ошибка 506 строка - {}'.format(message))
             return self.respond_html(overquotatmpl.render({
                 'title': SERVER_OVER_QUOTA,
                 'scripts': scripts.render({
@@ -837,13 +835,13 @@ class Leader():
                     'rows[0][QUANTITY]': 1
                 }
                 q = urllib.urlencode(q)
-                url = "https://longbord.bitrix24.ru/rest/crm.lead.productrows.set.json?auth={}".format(Tasker.token)
+                url = "https://longbord.bitrix24.ru/rest/crm.lead.productrows.set.json?auth={}".format(Tasker.getToken())
                 req = urllib2.Request(url=url, data=q)
                 fp = urllib2.urlopen(req)
                 data = json.loads(fp.read())
             return lead
         except BaseException as err:
-            if 'code' in err and err.code == 401:
+            if err.code == 401:
                 logging.error(LEAD_AUTH_FAIL)
                 Tasker.refreshToken()
                 return self.add(
@@ -927,7 +925,7 @@ class BTX24(webapp2.RequestHandler):
                 for i in serviceFields.keys():
                     q.append('fields[{}]={}'.format(i, serviceFields[i]))
                 q = "&".join(q)
-                url = "https://longbord.bitrix24.ru/rest/crm.product.add?auth={}".format(Tasker.token)
+                url = "https://longbord.bitrix24.ru/rest/crm.product.add?auth={}".format(Tasker.getToken())
                 req = urllib2.Request(url=url, data=q)
                 fp = urllib2.urlopen(req)
                 data = json.loads(fp.read())
