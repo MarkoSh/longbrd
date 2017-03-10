@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+
 reload(sys)
 sys.setdefaultencoding('utf8')
 
@@ -24,6 +25,7 @@ from google.appengine.ext import ndb
 from twilio.rest import TwilioRestClient
 
 from google.appengine.api import urlfetch
+
 urlfetch.set_default_fetch_deadline(45)
 
 from keys import *
@@ -123,7 +125,7 @@ class MainPage(webapp2.RequestHandler):
             try:
                 fp = urllib2.urlopen(url)
                 data = json.loads(fp.read())
-                ndb.delete_multi(Token.query().fetch(keys_only=True)) #TODO: переделать в бач
+                ndb.delete_multi(Token.query().fetch(keys_only=True))  # TODO: переделать в бач
                 token = Token(title="Bitrix24", prefix="btrx", token=data['access_token'],
                               refresh_token=data['refresh_token'])
                 token.put()
@@ -231,7 +233,7 @@ class MainPage(webapp2.RequestHandler):
             product = int(self.request.get('product')) if self.request.get('product') else 0
 
             if phone or email or contact:
-                promoKey = Promo.query(Promo.code==promo).get() if promo else 0
+                promoKey = Promo.query(Promo.code == promo).get() if promo else 0
                 productKey = Product.get_by_id(product) if product else 0
                 data = {
                     'label': label,
@@ -488,7 +490,7 @@ def addLead(data, lead=False):
         ip=data['ip'],
         ga=data['label']
     )
-    if not isinstance(leaderData, int) :
+    if not isinstance(leaderData, int):
         return addLead(data=data, lead=lead)
     lead.crmId = leaderData
     key = lead.put()
@@ -599,7 +601,8 @@ class Blog(webapp2.RequestHandler):
         for post in posts:
             i += 1
             if i == 3:
-                postsoutput += u'<div class="service-details"><div class="row text-center">{}</div></div>'.format(productsoutput)
+                postsoutput += u'<div class="service-details"><div class="row text-center">{}</div></div>'.format(
+                    productsoutput)
             postsoutput += posttmpl.render(post)
 
         request = urllib2.urlopen(
@@ -792,7 +795,7 @@ class Tasker():
         try:
             fp = urllib2.urlopen(url)
             data = json.loads(fp.read())
-            ndb.delete_multi(Token.query().fetch(keys_only=True)) #TODO: переделать в бач
+            ndb.delete_multi(Token.query().fetch(keys_only=True))  # TODO: переделать в бач
             token = Token(title="Bitrix24", prefix="btrx", token=data['access_token'],
                           refresh_token=data['refresh_token'])
             key = token.put()
@@ -856,7 +859,8 @@ class Leader():
                     q['rows[1][PRICE]'] = -promo.discount
                     q['rows[1][QUANTITY]'] = 1
                 q = urllib.urlencode(q)
-                url = "https://longbord.bitrix24.ru/rest/crm.lead.productrows.set.json?auth={}".format(Tasker.getToken())
+                url = "https://longbord.bitrix24.ru/rest/crm.lead.productrows.set.json?auth={}".format(
+                    Tasker.getToken())
                 req = urllib2.Request(url=url, data=q)
                 fp = urllib2.urlopen(req)
                 data = json.loads(fp.read())
@@ -1055,6 +1059,64 @@ class Importer(webapp2.RequestHandler):
             yield iterable[ndx:min(ndx + n, l)]
 
 
+class InstaCheck(webapp2.RequestHandler):
+    def get(self):
+        if self.request.get('code'):
+            code = self.request.get('code')
+            q = {
+                'client_id': INSTAGRAM_CLIENT_ID,
+                'client_secret': INSTAGRAM_CLIENT_SECRET,
+                'grant_type': 'authorization_code',
+                'redirect_uri': INSTAGRAM_REDIRECT_URI,
+                'code': code
+            }
+            q = urllib.urlencode(q)
+            url = 'https://api.instagram.com/oauth/access_token'
+            req = urllib2.Request(url=url, data=q)
+            try:
+                fp = urllib2.urlopen(req)
+                data = fp.read()
+                return self.response_json(data)
+            except BaseException, msg:
+                return self.response_json(msg)
+
+        if self.request.get('authorize'):
+            q = {
+                'client_id': INSTAGRAM_CLIENT_ID,
+                'redirect_uri': INSTAGRAM_REDIRECT_URI,
+                'response_type': 'code',
+                'scope': 'follower_list'
+            }
+            q = urllib.urlencode(q)
+            url = 'https://api.instagram.com/oauth/authorize/?{}'.format(q)
+            # req = urllib2.Request(url=url)
+            # fp = urllib2.urlopen(req)
+            # data = fp.read()
+            return self.response_html('<script>window.open("{}", "_blank")</script>'.format(url))
+
+        q = {
+            'access_token': INSTAGRAM_ACCESS_TOKEN
+        }
+        q = urllib.urlencode(q)
+        url = "https://api.instagram.com/v1/users/{}/followed-by?{}".format(
+            'self',
+            # INSTAGRAM_USER_ID,
+            q
+        )
+        req = urllib2.Request(url=url)
+        fp = urllib2.urlopen(req)
+        data = fp.read()
+        return self.response_json(data)
+
+    def response_json(self, str):
+        self.response.headers['Content-Type'] = 'application/json'
+        self.response.write(str)
+
+    def response_html(self, str):
+        self.response.headers['Content-Type'] = 'text/html'
+        self.response.write(str)
+
+
 app = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/order', MainPage),
@@ -1076,5 +1138,7 @@ app = webapp2.WSGIApplication([
     (r'/export.(.+)', Exporter),
     (r'/import.(.+)', Importer),
 
-    (r'/btx24/(.+)/(.+|)', BTX24)
+    (r'/btx24/(.+)/(.+|)', BTX24),
+
+    ('/instacheck', InstaCheck)
 ], debug=True)
