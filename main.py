@@ -871,6 +871,7 @@ class Leader():
                     email=email,
                     message=message,
                     contact=contact,
+                    promo=promo,
                     product=product,
                     ip=ip,
                     ga=ga)
@@ -882,21 +883,16 @@ class BTX24(webapp2.RequestHandler):
         'synced': []
     }
     models = {
-        'leads': Lead(),
-        'products': Product()
+        'products': Product(),
+        'promo': Promo(),
     }
     handling = {
-        'leads': { #TODO: Нихуя для лидов пока делать не буду, ниже будет разблюдовка полей для товаров, потом запилим для лидов.
-            'add': 'crm.lead.add',
-            'list': 'crm.lead.list'
-        },
         'products': {
             'add': 'crm.product.add',
             'list': 'crm.product.list',
             'fields': {
                 'title': "NAME",
-                'price': "PRICE",
-                'images': "PREVIEW_PICTURE"
+                'price': "PRICE"
             },
             'serviceFields': {
                 'ACTIVE': "Y",
@@ -905,6 +901,22 @@ class BTX24(webapp2.RequestHandler):
                 'VAT_INCLUDED': "Y",
                 'CATALOG_ID': 24,
                 'SECTION_ID': 16
+            }
+        },
+        'promo': {
+            'add': 'crm.product.add',
+            'list': 'crm.product.list',
+            'fields': {
+                'title': "NAME",
+                'price': "PRICE"
+            },
+            'serviceFields': {
+                'ACTIVE': "Y",
+                'CURRENCY_ID': "RUB",
+                'MEASURE': 9,
+                'VAT_INCLUDED': "Y",
+                'CATALOG_ID': 24,
+                'SECTION_ID': 22
             }
         }
     }
