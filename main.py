@@ -116,7 +116,7 @@ class MainPage(webapp2.RequestHandler):
                 'client_id': BTRX24_CODE,
                 'grant_type': "authorization_code",
                 'client_secret': BTRX24_KEY,
-                'redirect_uri': "http://longbrd.ru",
+                'redirect_uri': "https://longbrd.ru",
                 'code': code,
                 'scope': "crm,user,task,tasks_extended,sonet_group"
             }
@@ -208,7 +208,8 @@ class MainPage(webapp2.RequestHandler):
                 'postscount': postscount,
                 'instaphotos': jsonData['data']['counts']['media'],
                 'instafollowers': jsonData['data']['counts']['followed_by'],
-                'photo_stream': photo_stream
+                'photo_stream': photo_stream,
+                'admin': admin
             }),
             'products': productsoutput,
             'posts': postsoutput,
@@ -283,6 +284,7 @@ class MainPage(webapp2.RequestHandler):
         return [{
                     'src': photo.src,
                     'url': photo.link,
+                    'id': photo.key.id()
                 } for photo in images[:num]]
 
     @staticmethod
@@ -346,7 +348,7 @@ class Cron(webapp2.RequestHandler):
         if path == '/cron_getvideos':
             q = {
                 'part': 'snippet',
-                'maxResults': '1',
+                'maxResults': '50',
                 'type': 'video',
                 'q': 'Лонгбординг',
                 'relevanceLanguage': 'ru',
@@ -393,7 +395,7 @@ class Cron(webapp2.RequestHandler):
                 post = Post.get_by_id(key.id())
                 taskId = Tasker().add(
                     title="Подготовить описание для клипа - {}".format(key.id()),
-                    descr="Адрес на сайте - http://longbrd.ru/blog.html#post-{}".format(key.id())
+                    descr="Адрес на сайте - https://longbrd.ru/blog.html#post-{}".format(key.id())
                 )
                 if taskId:
                     post.taskId = taskId
@@ -423,7 +425,7 @@ class Cron(webapp2.RequestHandler):
                 'sl': random.randrange(1000, 3000)
             }
             q = urllib.urlencode(q)
-            url = 'http://longbrd.ru/order'
+            url = 'https://longbrd.ru/order'
             # url = 'http://localhost:8080/order'
             req = urllib2.Request(url=url, data=q)
             req.add_header('Cookie', '_ga={}'.format(_ga))
@@ -622,7 +624,8 @@ class Blog(webapp2.RequestHandler):
                 'postscount': postscount,
                 'instaphotos': jsonData['data']['counts']['media'],
                 'instafollowers': jsonData['data']['counts']['followed_by'],
-                'photo_stream': photo_stream
+                'photo_stream': photo_stream,
+                'admin': admin
             }),
             'posts': postsoutput,
             'recent': recent,
@@ -787,7 +790,7 @@ class Tasker():
             'client_id': BTRX24_CODE,
             'grant_type': "refresh_token",
             'client_secret': BTRX24_KEY,
-            'redirect_uri': "http://longbrd.ru",
+            'redirect_uri': "https://longbrd.ru",
             'refresh_token': Tasker.getRefreshToken()
         }
         q = urllib.urlencode(q)
@@ -1033,7 +1036,7 @@ class Importer(webapp2.RequestHandler):
                 'token': Token()
             }
             if kind in models:
-                url = 'http://longbrd.ru/export.{}'.format(kind)
+                url = 'https://longbrd.ru/export.{}'.format(kind)
 
                 fp = urllib2.urlopen(url)
                 data = json.loads(fp.read())
@@ -1061,6 +1064,9 @@ class Importer(webapp2.RequestHandler):
 
 class InstaCheck(webapp2.RequestHandler):
     def get(self):
+        with open('ig.cookies') as fp:
+            cookies = json.loads(fp.read())
+
         if self.request.get('code'):
             code = self.request.get('code')
             q = {
@@ -1117,6 +1123,19 @@ class InstaCheck(webapp2.RequestHandler):
         self.response.write(str)
 
 
+class Well(webapp2.RequestHandler):
+    def get(self, tst):
+        if self.request.server_name == "longbrd.ru":
+            str = "1LSxjGJiGhfTXNsVJUbun6BFmE6ZBWOvdp6ZcfqpA_M.ACaQ29xPOnL-CqIvgxiRrsBnl5e7zSMbZJ5eZGblUsg"
+        if self.request.server_name == "longbrd.com":
+            str = "qrtuFJD3PqunIgYp2hAYN8nCQ8IoPi-LOxN4qL5mNT0.ACaQ29xPOnL-CqIvgxiRrsBnl5e7zSMbZJ5eZGblUsg"
+        return self.response_html(str)
+
+    def response_html(self, str):
+        self.response.headers['Content-Type'] = 'text/html'
+        self.response.write(str)
+
+
 app = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/order', MainPage),
@@ -1140,5 +1159,7 @@ app = webapp2.WSGIApplication([
 
     (r'/btx24/(.+)/(.+|)', BTX24),
 
-    ('/instacheck', InstaCheck)
+    ('/instacheck', InstaCheck),
+
+    ('/.well-known/(.*)', Well)
 ], debug=True)
