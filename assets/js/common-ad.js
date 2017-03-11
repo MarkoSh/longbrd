@@ -59,4 +59,11 @@
         }
     });
 
+    $(".stream-remove").click(function (e) {
+        var $this = $(this);
+        var id = $this.data('id');
+        console.warn(id);
+        return false;
+    });
+
 })(jQuery);
