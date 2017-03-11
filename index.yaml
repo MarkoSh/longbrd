@@ -15,6 +15,17 @@ indexes:
   - name: type
   - name: date
 
+- kind: Insta
+  properties:
+  - name: type
+  - name: date
+    direction: desc
+
+- kind: Post
+  properties:
+  - name: sts
+  - name: date
+
 - kind: Post
   properties:
   - name: sts

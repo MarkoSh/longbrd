@@ -1,6 +1,6 @@
-<div class="col-md-3 col-sm-6">
+<div class="{% if mainpage %}col-md-3 col-sm-6{% else %}col-md-4 col-sm-6{% endif %}">
     {% if admin %}<form id="editor-{{ productId }}" class="">{% endif %}
-    <div class="item wow animated fadeInLeft" data-wow-delay=".5s" itemscope
+    <div class="item{% if mainpage %} wow animated fadeInLeft{% endif %}" data-wow-delay=".5s" itemscope
          itemtype="http://schema.org/Product">
         <div class="cycle-slideshow item-icon">
             {% for item in images %}
@@ -34,7 +34,7 @@
                 </li>
             </ul><!-- /.item-description -->
         </div><!-- /.item-details -->
-        <a href="#" class="btn read-more">Заказать</a>
+        <a href="#product-popup" data-id="{{ productId }}" class="btn read-more product-btn">Заказать</a>
     </div><!-- /.item -->
     {% if admin %}</form>{% endif %}
 </div>

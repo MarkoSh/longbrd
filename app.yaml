@@ -7,6 +7,31 @@ threadsafe: true
 default_expiration: "30d"
 
 handlers:
+- url: /favicon\.png
+  mime_type: image/png
+  static_files: static/favicon.png
+  upload: static/favicon\.png
+
+- url: /favicon\.ico
+  mime_type: image/vnd.microsoft.icon
+  static_files: static/favicon.ico
+  upload: static/favicon\.ico
+
+- url: /(.*\.txt)
+  mime_type: text/plain
+  static_files: static/\1
+  upload: static/(.*\.txt)
+
+- url: /crossdomain.xml
+  mime_type: text/x-cross-domain-policy
+  static_files: static/crossdomain.xml
+  upload: static/crossdomain.xml
+
+- url: /(.*\.xml)
+  mime_type: text/xml
+  static_files: static/\1
+  upload: static/(.*\.xml)
+
 - url: /assets/fonts/(.*\.otf)
   mime_type: application/x-font-otf
   static_files: assets/fonts/\1
@@ -21,36 +46,22 @@ handlers:
 - url: /images
   static_dir: images
 
-- url: /(.*\.(gif|png|jpg|ico))$
-  static_files: /\1
-  upload: /.*\.(gif|png|jpg|ico)$
-
-- url: /email\.php
-  script: email.php
-
 - url: /_ah/queue/deferred
   script: google.appengine.ext.deferred.deferred.application
   login: admin
 
-- url: /robots\.txt
-  mime_type: text/plain
-  static_files: static/robots.txt
-  upload: static/robots.txt
-
-- url: /sitemap\.xml
-  mime_type: text/xml
-  static_files: static/sitemap.xml
-  upload: static/sitemap.xml
-
 - url: .*
   script: main.app
+  secure: always
 
 skip_files:
-- ^(.*/)?.*\.scss$
+- ^(.*/)?.*\.scss
+- ^(.*/)?.*\.pyc
+- ^(.*/)?.*\.db
 
 libraries:
 - name: webapp2
-  version: "2.5.2"
+  version: latest
 - name: jinja2
   version: latest
 - name: lxml

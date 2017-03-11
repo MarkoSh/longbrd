@@ -54,35 +54,20 @@
             <div class="container">
                 <div class="row">
 
-                    <div class="col-sm-4">
+                    <div class="col-sm-4 col-sm-offset-3">
                         <div class="widget widget_menu">
                             <h3 class="widget-title">Навигация</h3><!-- /.widget-title -->
                             <div class="widget-details">
                                 <nav>
                                     <ul>
+                                        <li><a href="/#main-slider">Начало</a></li>
+                                        <li><a href="/#bestmodels">Лучшие модели</a></li>
                                         <li><a href="/#about">О компании</a></li>
-                                        <li><a href="/#services">Обслуживание</a></li>
-                                        <li><a href="/#blog">Акции</a></li>
+                                        <li><a href="/#portfolio">Наши предложения</a></li>
+                                        <li><a href="/blog.html">Блог</a></li>
                                         <li><a href="/#contact">Контакты</a></li>
                                     </ul>
                                 </nav>
-                            </div><!-- /.widget-details -->
-                        </div><!-- /.widget -->
-                    </div>
-
-                    <div class="col-sm-4">
-                        <div class="widget widget_latest-blog-post">
-                            <h3 class="widget-title">Акции и скидки</h3><!-- /.widget-title -->
-                            <div class="widget-details">
-                                <div class="title-list">
-                                    <ul>
-                                        <li><a href="#" class="entry-title">TopClass WordPress Theme</a></li>
-                                        <li><a href="#" class="entry-title">Foody HTML5 Template</a></li>
-                                        <li><a href="#" class="entry-title">Memorials HTML5 Template</a></li>
-                                        <li><a href="#" class="entry-title">Mama HTML5 Template</a></li>
-                                        <li><a href="#" class="entry-title">Open HTML5 Template</a></li>
-                                    </ul>
-                                </div><!-- /.title-list -->
                             </div><!-- /.widget-details -->
                         </div><!-- /.widget -->
                     </div>
@@ -94,7 +79,12 @@
                                 <div class="photo-list">
                                     <ul>
                                         {% for item in photo_stream %}
-                                        <li><a href="{{ item.url }}" target="_blank"><img src="{{ item.src }}" alt=""></a></li>
+                                        <li class="photo-list-li">
+                                            {% if admin %}<a href="#stream-remove" class="stream-remove" data-id="{{ item.id }}"><i class="fa fa-close"></i></a>{% endif %}
+                                            <a href="{{ item.url }}" target="_blank">
+                                                <img src="{{ item.src }}" alt="">
+                                            </a>
+                                        </li>
                                         {% endfor %}
                                     </ul>
                                 </div><!-- /.photo-list -->

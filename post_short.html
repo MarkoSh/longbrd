@@ -1,0 +1,18 @@
+<div class="col-md-4">
+    <article class="type-post post wow animated fadeInUp" data-wow-delay=".35s" itemscope itemtype="https://schema.org/Blog">
+
+        <meta itemprop="name" content="{{ title }}">
+        <meta itemprop="description" content="{{ title }}">
+
+        <div class="post-thumbnail post-short-thumbnail">
+            <a href="/blog.html#post-{{ postId }}" itemprop="url">
+                <img src="{{ thumbnailUrl }}" itemprop="thumbnailUrl" alt="{{ title }}" />
+            </a>
+        </div><!-- /.post-thumbnail -->
+
+        <div class="post-content">
+            <h4 class="entry-title"><a href="/blog.html#post-{{ postId }}">{{ title }}</a></h4>
+            <!-- /.entry-title -->
+        </div><!-- /.post-content -->
+    </article><!-- /.type-post -->
+</div>
