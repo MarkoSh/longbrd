@@ -1352,7 +1352,7 @@ button:focus {
 }
 .stream-list li {
   margin: 0 5px 8px 0;
-  max-width: 70px;
+  max-width: 68px;
 }
 .widget-details nav li {
   display: block;
@@ -1512,6 +1512,7 @@ label[for^=agree] {
   margin: 10px auto;
   display: block;
   position: relative;
+  padding-left: 45px;
   [type=checkbox] {
     display: none;
   }
@@ -1524,7 +1525,7 @@ label[for^=agree] {
   .switcher {
     display: block;
     position: absolute;
-    left: -45px;
+    left: 0;
     top: 0;
     &:before {
       content: "";

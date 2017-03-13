@@ -130,7 +130,8 @@ class MainPage(webapp2.RequestHandler):
                               refresh_token=data['refresh_token'])
                 token.put()
                 self.redirect("/")
-            except urllib2.HTTPError as err:
+            except BaseException as err:
+                logging.error(err)
                 self.redirect("/?error")
 
         template = JINJA_ENVIRONMENT.get_template('index.html')
@@ -144,8 +145,8 @@ class MainPage(webapp2.RequestHandler):
 
         try:
             photo_stream = self.getPhotoStream(0, 16)
-        except BaseException, message:
-            logging.critical('Ошибка 139 строка - {}'.format(message))
+        except BaseException as err:
+            logging.error(err)
             return self.respond_html(overquotatmpl.render({
                 'title': SERVER_OVER_QUOTA,
                 'scripts': scripts.render({
@@ -450,10 +451,12 @@ class Cron(webapp2.RequestHandler):
                         responseData['test_get'] = 'FAIL'
                         logging.error(LEAD_TEST_CRM_NOT_FOUND)
                 except BaseException as err:
+                    logging.error(err)
                     if 'code' in err and err.code == 401:
                         responseData['test_get'] = '{}'.format()
                         logging.error(LEAD_TEST_AUTH_FAIL)
             except BaseException as err:
+                logging.error(err)
                 responseData['status'] = 'no'
                 responseData['error'] = err
                 logging.error(LEAD_FAIL)
@@ -521,8 +524,8 @@ class Blog(webapp2.RequestHandler):
 
         try:
             photo_stream = MainPage.getPhotoStream(0, 16)
-        except BaseException, message:
-            logging.critical('Ошибка 506 строка - {}'.format(message))
+        except BaseException as err:
+            logging.error(err)
             return self.respond_html(overquotatmpl.render({
                 'title': SERVER_OVER_QUOTA,
                 'scripts': scripts.render({
@@ -720,6 +723,7 @@ class Tasker():
             data = json.loads(fp.read())
             return data['result']
         except BaseException as err:
+            logging.error(err)
             if 'code' in err and err.code == 401:
                 logging.error(TASK_AUTH_FAIL)
                 Tasker.refreshToken()
@@ -737,6 +741,7 @@ class Tasker():
             data = json.loads(fp.read())
             return data['result']
         except BaseException as err:
+            logging.error(err)
             if 'code' in err and err.code == 401:
                 logging.error(TASK_AUTH_FAIL)
                 Tasker.refreshToken()
@@ -754,6 +759,7 @@ class Tasker():
             data = json.loads(fp.read())
             return data['result']
         except BaseException as err:
+            logging.error(err)
             if 'code' in err and err.code == 401:
                 logging.error(TASK_AUTH_FAIL)
                 Tasker.refreshToken()
@@ -771,6 +777,7 @@ class Tasker():
             data = json.loads(fp.read())
             return data['result']
         except BaseException as err:
+            logging.error(err)
             if 'code' in err and err.code == 401:
                 logging.error(TASK_AUTH_FAIL)
                 Tasker.refreshToken()
@@ -805,6 +812,7 @@ class Tasker():
             logging.info(TOKEN_UPDATED)
             return key
         except BaseException as err:
+            logging.error(err)
             if 'code' in err and err.code == 401:
                 logging.error(TOKEN_UPDATE_FAIL)
                 return Tasker.refreshToken()
@@ -869,6 +877,7 @@ class Leader():
                 data = json.loads(fp.read())
             return lead
         except BaseException as err:
+            logging.error(err)
             if err.code == 401:
                 logging.error(LEAD_AUTH_FAIL)
                 Tasker.refreshToken()
@@ -881,7 +890,8 @@ class Leader():
                     promo=promo,
                     product=product,
                     ip=ip,
-                    ga=ga)
+                    ga=ga
+                )
 
 
 class BTX24(webapp2.RequestHandler):
@@ -983,6 +993,7 @@ class BTX24(webapp2.RequestHandler):
             data = json.loads(fp.read())
             return self.respond_json(data)
         except BaseException as err:
+            logging.error(err)
             data = json.loads(err.fp.read())
             return self.respond_json(data)
 
@@ -1083,8 +1094,9 @@ class InstaCheck(webapp2.RequestHandler):
                 fp = urllib2.urlopen(req)
                 data = fp.read()
                 return self.response_json(data)
-            except BaseException, msg:
-                return self.response_json(msg)
+            except BaseException as err:
+                logging.error(err)
+                return self.response_json(err)
 
         if self.request.get('authorize'):
             q = {

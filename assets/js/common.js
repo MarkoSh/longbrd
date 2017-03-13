@@ -88,10 +88,12 @@
         return false;
     });
 
-    $("#sidebar").sticky({
-        topSpacing: 70,
-        bottomSpacing: 880
-    });
+    if ($(window).width() > 768) {
+        $("#sidebar").sticky({
+            topSpacing: 70,
+            bottomSpacing: 880
+        });
+    }
 
     $("form.orderform")
         .append('<input type="hidden" name="label" value="">')
